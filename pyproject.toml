@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "readmegen"
+version = "0.1.0"
+description = "AI-powered README generator. Point it at any repo."
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "pathspec>=0.12",
+    "pydantic>=2",
+]
+
+[project.scripts]
+readmegen = "src.cli.index:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
