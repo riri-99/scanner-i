@@ -183,7 +183,7 @@ def generate(
         f"[green]✓[/green] Scanned [bold]{snapshot.file_count}[/bold] files  "
         f"[bold]{len(snapshot.all_frameworks)}[/bold] frameworks  "
         f"[bold]{len(snapshot.prod_deps)}[/bold] dependencies\n"
-        f"  [dim]Snapshot → {root / '.readmegen' / 'snapshot.json'}[/dim]\n"
+        f"[dim]Snapshot → {root / '.readmegen' / 'snapshot.json'}[/dim]\n"
     )
 
 
