@@ -11,6 +11,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.text import Text
 from rich.columns import Columns
 from rich import box
@@ -32,175 +33,131 @@ console = Console()
 
 @cli.command()
 def scan(
-    path: Path = typer.Argument(
-        default=".",
-        help="Path to the repository to scan.",
-        show_default=True,
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v",
-        help="Show every collected file and all skip reasons.",
-    ),
+    path: Path = typer.Argument(default=".", help="Path to the repository to scan."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all collected files."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Force re-scan even if snapshot exists."),
 ):
-    """
-    Scan a repository and display what was found.
-    Runs Phase 1 only — no README is generated yet.
-    """
-    # ── Validate path ─────────────────────────────────────────────────────────
+    
     root = path.resolve()
-    if not root.exists():
-        console.print(f"[red]✗[/red] Path does not exist: [bold]{root}[/bold]")
-        raise typer.Exit(code=1)
-    if not root.is_dir():
-        console.print(f"[red]✗[/red] Not a directory: [bold]{root}[/bold]")
+    if not root.exists()or not root.is_dir():
+        console.print(f"[red]✗[/red] Invalid path: [bold]{root}[/bold]")
         raise typer.Exit(code=1)
 
-    # ── Run Phase 1 ───────────────────────────────────────────────────────────
     console.print()
-    with console.status(
-        f"[bold cyan]Scanning[/bold cyan] [dim]{root}[/dim]...",
-        spinner="dots",
-    ):
-        result = run_scan(root)
 
-    walk = result.walk
-    deps = result.deps
+    with console.status(f"[bold cyan]Scanning[/bold cyan] [dim]{root}[/dim]...", spinner="dots",):
+        snapshot = run_scan(root, use_cache=not no_cache)
 
-    # ── Derived values ────────────────────────────────────────────────────────
-    lang_counts  = Counter(f.language for f in walk.files)
-    top_langs    = ", ".join(
-        f"{lang} ([green]{count}[/green])" for lang, count in lang_counts.most_common(5)
-    )
-    entry_points = [f.path for f in walk.files if f.is_entry_point]
-    truncated    = sum(1 for f in walk.files if f.is_truncated)
-    all_frameworks = deps.all_frameworks
-    all_deps       = [d for d in deps.all_dependencies if not d.is_dev]
-    dev_deps       = [d for d in deps.all_dependencies if d.is_dev]
-    ecosystems     = deps.ecosystems
 
-    # ── Summary panel ─────────────────────────────────────────────────────────
-    summary = Text()
+    # Summary panel 
+    s = Text()
+ 
+    s.append("  Repo:             ", style="dim")
+    s.append(f"{snapshot.name}\n", style="bold white")
+ 
+    s.append("  Primary language: ", style="dim")
+    s.append(f"{snapshot.primary_language}\n", style="bold cyan")
+ 
+    s.append("  All languages:    ", style="dim")
+    s.append(f"{', '.join(snapshot.languages) or 'none'}\n", style="cyan")
+ 
+    s.append("  Files collected:  ", style="dim")
+    s.append(f"{snapshot.file_count}", style="bold green")
+    s.append(f"   (skipped {snapshot.skipped_count})\n", style="dim")
+ 
+    s.append("  Entry points:     ", style="dim")
+    s.append(f"{', '.join(snapshot.entry_points) or 'none detected'}\n", style="magenta")
+ 
+    s.append("  Ecosystems:       ", style="dim")
+    ecosystems = [e.ecosystem for e in snapshot.ecosystems]
+    s.append(f"{', '.join(ecosystems) or 'none detected'}\n", style="cyan")
+ 
+    s.append("  Frameworks:       ", style="dim")
+    s.append(f"{', '.join(snapshot.all_frameworks) or 'none detected'}\n", style="bold cyan")
+ 
+    s.append("  Dependencies:     ", style="dim")
+    s.append(f"{len(snapshot.prod_deps)} prod", style="green")
+    if snapshot.dev_deps:
+        s.append(f"   {len(snapshot.dev_deps)} dev", style="dim")
+    s.append("\n")
 
-    summary.append("  Repo:           ", style="dim")
-    summary.append(f"{root.name}\n", style="bold white")
 
-    summary.append("  Files found:    ", style="dim")
-    summary.append(f"{len(walk.files)}", style="bold green")
-    summary.append(f"  (skipped {walk.skipped_count})\n", style="dim")
+    # Flags row
+    flags = []
+    if snapshot.has_dockerfile: flags.append("[dim]Docker[/dim]")
+    if snapshot.has_tests:      flags.append("[dim]Tests[/dim]")
+    if snapshot.has_ci:         flags.append("[dim]CI[/dim]")
+    if flags:
+        s.append("  Detected:         ", style="dim")
+        s.append("  ".join(flags) + "\n")
+ 
+    console.print(Panel(s, title="[bold]Scan Results[/bold]", border_style="cyan"))
 
-    summary.append("  Languages:      ", style="dim")
-    summary.append(Text.from_markup(f"{top_langs or 'none detected'}\n"))
 
-    summary.append("  Entry points:   ", style="dim")
-    summary.append(
-        f"{', '.join(entry_points) or 'none detected'}\n",
-        style="magenta",
-    )
-
-    summary.append("  Ecosystems:     ", style="dim")
-    summary.append(
-        f"{', '.join(ecosystems) if ecosystems else 'none detected'}\n",
-        style="cyan",
-    )
-
-    summary.append("  Frameworks:     ", style="dim")
-    summary.append(
-        f"{', '.join(all_frameworks) if all_frameworks else 'none detected'}\n",
-        style="bold cyan",
-    )
-
-    summary.append("  Dependencies:   ", style="dim")
-    summary.append(f"{len(all_deps)} prod", style="green")
-    if dev_deps:
-        summary.append(f"  {len(dev_deps)} dev", style="dim")
-    summary.append("\n")
-
-    if truncated:
-        summary.append("  Truncated:      ", style="dim")
-        summary.append(f"{truncated} files (content too large)\n", style="yellow")
-
-    console.print(Panel(summary, title="[bold]Scan Results[/bold]", border_style="cyan"))
-
-    # ── Dependency breakdown (always shown, not just verbose) ─────────────────
-    if deps.results:
-        for parse_result in deps.results:
-            prod = [d for d in parse_result.dependencies if not d.is_dev]
-            dev  = [d for d in parse_result.dependencies if d.is_dev]
-            label = f"[bold]{parse_result.ecosystem}[/bold] [dim]({parse_result.source_file})[/dim]"
-
-            dep_table = Table(box=box.SIMPLE, show_header=True, header_style="dim")
-            dep_table.add_column("Package", style="white")
-            dep_table.add_column("Version", style="dim")
-            dep_table.add_column("Type", style="dim")
-
-            for d in prod[:20]:   # cap display at 20 prod deps
-                dep_table.add_row(d.name, d.version or "—", "prod")
-            for d in dev[:5]:     # show up to 5 dev deps
-                dep_table.add_row(d.name, d.version or "—", "[dim]dev[/dim]")
-
-            if len(prod) > 20:
-                dep_table.add_row(f"[dim]... and {len(prod) - 20} more[/dim]", "", "")
-
-            console.print(f"\n  {label}")
-            console.print(dep_table)
-
-        if all_frameworks:
-            console.print(
-                f"\n  [dim]Detected frameworks →[/dim] "
-                + "  ".join(f"[bold cyan]{f}[/bold cyan]" for f in all_frameworks)
-            )
-
-    # ── Verbose: full file table ───────────────────────────────────────────────
-    if verbose:
+    # Dependency tables
+    if snapshot.ecosystems:
         console.print()
-        table = Table(
-            box=box.SIMPLE_HEAD,
-            show_header=True,
-            header_style="bold cyan",
-        )
-        table.add_column("File", style="white")
-        table.add_column("Language", style="cyan")
-        table.add_column("Size (KB)", justify="right")
-        table.add_column("Entry?", justify="center")
-        table.add_column("Truncated?", justify="center")
+        for eco in snapshot.ecosystems:
+            prod = [d for d in eco.dependencies if not d.is_dev]
+            dev  = [d for d in eco.dependencies if d.is_dev]
+ 
+            console.print(
+                f"  [bold]{eco.ecosystem}[/bold] [dim]via {eco.source_file}[/dim]"
+                + (f"  [dim]scripts: {', '.join(eco.scripts.keys())}[/dim]" if eco.scripts else "")
+            )
+ 
+            t = Table(box=box.SIMPLE, show_header=True, header_style="dim", padding=(0, 1))
+            t.add_column("Package")
+            t.add_column("Version", style="dim")
+            t.add_column("", style="dim")   # prod / dev label
+ 
+            for d in prod[:15]:
+                t.add_row(d.name, d.version or "—", "prod")
+            for d in dev[:5]:
+                t.add_row(f"[dim]{d.name}[/dim]", d.version or "—", "dev")
+            if len(prod) > 15:
+                t.add_row(f"[dim]… +{len(prod) - 15} more[/dim]", "", "")
+ 
+            console.print(t)
 
-        for f in walk.files:
-            table.add_row(
+    # Verbose: full file list 
+    if verbose:
+        console.print(Rule("[dim]Collected files[/dim]"))
+        t = Table(box=box.SIMPLE_HEAD, show_header=True, header_style="bold cyan")
+        t.add_column("File", style="white")
+        t.add_column("Language", style="cyan")
+        t.add_column("KB", justify="right")
+        t.add_column("Entry", justify="center")
+        t.add_column("Trunc", justify="center")
+ 
+        for f in snapshot.files:
+            t.add_row(
                 f.path,
                 f.language,
                 str(f.size_kb),
                 "[green]✓[/green]" if f.is_entry_point else "",
-                "[yellow]⚠[/yellow]"  if f.is_truncated  else "",
+                "[yellow]⚠[/yellow]" if f.is_truncated else "",
             )
-        console.print(table)
+        console.print(t)
 
-        if walk.skipped_reasons:
-            console.print("\n[dim]Skip reasons:[/dim]")
-            for reason, count in sorted(walk.skipped_reasons.items(), key=lambda x: -x[1]):
-                console.print(f"  [dim]{reason}:[/dim] {count}")
-
+    # Footer
+    snap_path = root / ".readmegen" / "snapshot.json"
+    console.print(f"\n  [dim]Snapshot saved →[/dim] [green]{snap_path}[/green]")
     console.print(
         f"\n[green]✓[/green] Phase 1 complete. "
         f"Run [bold cyan]readmegen generate {path}[/bold cyan] to produce a README.\n"
-    )
+    )    
 
 
 # ── generate command ──────────────────────────────────────────────────────────
 
 @cli.command()
+
 def generate(
-    path: Path = typer.Argument(
-        default=".",
-        help="Path to the repository to generate a README for.",
-    ),
-    output: Optional[Path] = typer.Option(
-        None, "--output", "-o",
-        help="Where to write the README. Defaults to <path>/README.md",
-    ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run",
-        help="Print the README to terminal instead of writing a file.",
-    ),
+    path: Path = typer.Argument(default=".", help="Path to the repository."),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output path for the README."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print to terminal instead of writing a file."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Force re-scan even if snapshot exists."),
 ):
     """
     Generate a README for a repository (full pipeline).
@@ -220,13 +177,13 @@ def generate(
     console.print()
 
     with console.status("[bold cyan]Scanning repository...[/bold cyan]", spinner="dots"):
-        result = run_generate(root)
+        snapshot = run_generate(root)
 
     console.print(
-        f"[green]✓[/green] Scanned [bold]{len(result.walk.files)}[/bold] files  "
-        f"[bold]{len(result.deps.all_frameworks)}[/bold] frameworks detected  "
-        f"[bold]{len(result.deps.all_dependencies)}[/bold] dependencies found\n"
-        f"Analysis coming in Phase 2.\n"
+        f"[green]✓[/green] Scanned [bold]{snapshot.file_count}[/bold] files  "
+        f"[bold]{len(snapshot.all_frameworks)}[/bold] frameworks  "
+        f"[bold]{len(snapshot.prod_deps)}[/bold] dependencies\n"
+        f"  [dim]Snapshot → {root / '.readmegen' / 'snapshot.json'}[/dim]\n"
     )
 
 

@@ -3,32 +3,27 @@
 from pathlib import Path
 from dataclasses import dataclass
 
-from .scanner.walker import walk, WalkResult
-from .scanner.parser import parse, AllDependencies
-
-@dataclass
-class ScanResult:
-    walk: WalkResult
-    deps: AllDependencies
+from .scanner.walker import walk
+from .scanner.parser import parse
+from .scanner.assembler import assemble, save, load, RepoSnapshot
 
 
-# PAHSE 1
-def run_scan(root_path: Path) -> WalkResult:
-    """
-    Phase 1: scan the repo and returns the WalkResult
-    called by the CLi "scan" command.
-    """
+def run_scan(root_path: Path, use_cache: bool = False) -> RepoSnapshot:
+    root_path = root_path.resolve()
+
+    if use_cache:
+        cached = load(root_path)
+        if cached:
+            return cached
+        
     walk_result = walk(root_path)
     deps_result = parse(root_path)
-    return ScanResult(walk=walk_result, deps=deps_result)
+    snapshot = assemble(walk_result, deps_result)
+    save(snapshot, root_path)
+    return snapshot
 
-def run_generate(root_path: Path) -> None:
 
-    # Phase 1: scan
-    scan_result = run_scan(root_path)
 
-    # Phase 2: analyse (stubbed)
-
-    # Phase 3: generate README (stubbed)
-
-    return scan_result
+def run_generate(root_path: Path) -> RepoSnapshot:
+    snapshot = run_scan(root_path)
+    return snapshot
