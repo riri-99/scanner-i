@@ -18,6 +18,7 @@ from rich import box
 from typing import Optional
 
 from ..orchestrator import run_scan, run_generate
+from ..analyzer.router import status as get_status
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -186,6 +187,47 @@ def generate(
         f"[dim]Snapshot → {root / '.readmegen' / 'snapshot.json'}[/dim]\n"
     )
 
+
+# ── Status Command ───────────────────────────────────────────────────────────────
+
+@cli.command()
+
+def status():
+    s = get_status()
+    console.print()
+    # Ollama row (use markup strings so Panel renders colors)
+    if s["ollama_running"] and s["ollama_model_ready"]:
+        ollama_status = f"[green]Running[/green] model [bold]{s['ollama_model']}[/bold] ready"
+    elif s["ollama_running"]:
+        ollama_status = (
+            f"[yellow]Running[/yellow] but [bold]{s['ollama_model']}[/bold] not pulled - run "
+            f"[cyan]ollama pull {s['ollama_model']}[/cyan]"
+        )
+    else:
+        ollama_status = "[dim]x Not running[/dim] install at https://ollama.com"
+
+    # Groq row
+    groq_status = (
+        f"[green]Key found[/green] model [bold]{s['groq_model']}[/bold]"
+        if s["groq_available"]
+        else "[dim]x No GROQ_API_KEY[/dim] get a free key at https://console.groq.com"
+    )
+
+    # Will use label (fixed formatting)
+    will_use_label = {
+        "ollama": f"[green]Ollama ({s['ollama_model']})[/green]",
+        "groq": f"[cyan]Groq ({s['groq_model']})[/cyan]",
+        "none": "[red]None - configure a backend before running generate[/red]",
+    }[s["will_use"]]
+
+    panel_text = (
+        f"Ollama: {ollama_status}\n"
+        f"Groq: {groq_status}\n\n"
+        f"Will use: {will_use_label}"
+    )
+
+    console.print(Panel(panel_text, title="[bold]Backend Status[/bold]", border_style="cyan"))
+    console.print()
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
