@@ -33,7 +33,10 @@ class OllamaClient(ModelClient):
         req = urllib.request.Request(
             url,
             data=body,
-            headers = {"Content-Type": "application/json"},
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "readmegen/0.1.0",
+            },
             method = "POST",
         )
 
@@ -66,7 +69,7 @@ class OllamaClient(ModelClient):
                 continue
 
             # Extract continue from this chunk
-            content = data.get("message", {}).ghet("content", "")
+            content = data.get("message", {}).get("content", "")
             if content:
                 parts.append(content)
 

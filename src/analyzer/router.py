@@ -89,9 +89,13 @@ def get_client() -> ModelClient:
 def _check_ollama() -> tuple[bool, bool]:
     try:
         url = f"{OLLAMA_HOST}/api/tags"
-        req = urllib.request.Request(url, method="GET")
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "readmegen/0.1.0"},
+            method="GET"
+        )
 
-        with urllib.request .urlopen(req, timeout=2) as resp:
+        with urllib.request.urlopen(req, timeout=2) as resp:
             if resp.status != 200:
                 return False, False
             data = json.loads(resp.read().decode())
@@ -120,7 +124,6 @@ def _try_groq() -> GroqClient | None:
         return None
  
     return GroqClient(
-        api_key=api_key,
         model=GROQ_MODEL,
         temperature=TEMPERATURE,
     )

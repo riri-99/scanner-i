@@ -39,7 +39,7 @@ _SCHEMA = """{
     "env_variables": [
             {"name": "VAR_NAME", "description": "what this variable controls and where to get the value"}
     ],
-    "api_endpoint": ["METHOD /path - what it does and what it returns"],
+    "api_endpoints": ["METHOD /path - what it does and what it returns"],
     "scripts": {"script_name": "plain English description of hwat running htis script does"},
     "license": "License name as a string, or null if not detected"
 }"""

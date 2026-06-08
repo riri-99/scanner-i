@@ -156,15 +156,15 @@ def _parse_requirements(path: Path) -> ParseResult | None:
             version = (match.group(2) or "").strip()
             deps.append(Dependency(name=name.lower(), version=version))
 
-        if not deps:
-            return None
-        
-        return ParseResult(
-            ecosystem="python",
-            source_file="requirements.txt",
-            dependencies=deps,
-            frameworks=_detect_frameworks([d.name for d in deps])
-        )
+    if not deps:
+        return None
+    
+    return ParseResult(
+        ecosystem="python",
+        source_file="requirements.txt",
+        dependencies=deps,
+        frameworks=_detect_frameworks([d.name for d in deps])
+    )
     
 
 def _parse_pyproject(path: Path) -> ParseResult | None:

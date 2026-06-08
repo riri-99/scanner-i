@@ -46,7 +46,7 @@ class AnalysisObject(BaseModel):
     @field_validator("tech_stack", "prerequisites", "setup_steps", "usage_examples", "api_endpoints", mode="before")
     @classmethod
     def ensure_str_list(cls, v: Any) -> list[str]:
-        if v in None:
+        if v is None:
             return[]
         if isinstance(v, str):
             return [v] if v.strip() else []
@@ -78,7 +78,7 @@ class AnalysisObject(BaseModel):
     @field_validator("purpose", "how_it_works", mode="before")
     @classmethod
     def ensure_str(cls, v: Any) -> str:
-        if v in None:
+        if v is None:
             return ""
         return str(v).strip()
     

@@ -43,7 +43,7 @@
   "model": {
       "ollama_host": "http://localhost:11434",
       "ollama_model": "codellama:7b",
-      "groq_model": "llama-3.1-8b-instant",
+      "groq_model": "llama-3.3-70b-versatile",
       "temperature": 0.2,
       "timeout_secs": 120,
       "preferred": "ollama"

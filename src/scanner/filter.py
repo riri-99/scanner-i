@@ -37,10 +37,13 @@ class FileFilter:
 
     def should_ignore(self, path: Path) -> tuple[bool, str]:
 
-        # 1. Skips parent directory if its in the hard ignore list
+        import fnmatch
+
+        # 1. Skips parent directory if its in the hard ignore list (handles globs like *.egg-info)
         for parent in path.parts:
-            if parent in IGNORED_DIRS:
-                return True, f"ignored directory: {parent}"
+            for pattern in IGNORED_DIRS:
+                if fnmatch.fnmatch(parent, pattern):
+                    return True, f"ignored directory: {parent}"
         
         # 2. Skip by filename
         if path.name in IGNORED_FILENAMES:

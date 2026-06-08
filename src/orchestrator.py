@@ -11,7 +11,7 @@ from .scanner.assembler import assemble, save as save_snapshot, load as load_sna
 from .analyzer.context import build as build_context
 from .analyzer.prompts import build as build_prompts
 from .analyzer.router import get_client
-from . analyzer.parser import parse as parse_response, AnalysisObject
+from .analyzer.parser import parse as parse_response, AnalysisObject
 
 # Paths
 
