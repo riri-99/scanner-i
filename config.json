@@ -42,10 +42,10 @@
 
   "model": {
       "ollama_host": "http://localhost:11434",
-      "ollama_model": "codellama:7b",
+      "ollama_model": "phi3:mini",
       "groq_model": "llama-3.3-70b-versatile",
       "temperature": 0.2,
       "timeout_secs": 120,
-      "preferred": "ollama"
+      "preferred": "groq"
     }
 }
