@@ -12,6 +12,7 @@ dependencies = [
     "rich>=13",
     "pathspec>=0.12",
     "pydantic>=2",
+    "jinja2>=3",
 ]
 
 [project.scripts]
