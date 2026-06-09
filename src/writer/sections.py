@@ -227,7 +227,7 @@ def _has_env_example(env_vars: AnalysisObject) -> str:
 
 # 9. API references
 
-def render_api_references(analysis: AnalysisObject) -> str:
+def render_api_reference(analysis: AnalysisObject) -> str:
 
     endpoints = [e.strip() for e in analysis.api_endpoints if e.strip()]
     if not endpoints:
