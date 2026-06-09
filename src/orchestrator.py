@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from .scanner.walker import walk
@@ -12,11 +13,23 @@ from .analyzer.context import build as build_context
 from .analyzer.prompts import build as build_prompts
 from .analyzer.router import get_client
 from .analyzer.parser import parse as parse_response, AnalysisObject
+from .writer.writer import write as write_readme, WriteResult
+
 
 # Paths
 
 READMEGEN_DIR = ".readmegen"
 ANALYSIS_FILE = "analysis.json"
+
+
+# Full Pipeline result
+
+@dataclass
+class GenerateResult:
+    snapshot: RepoSnapshot
+    analysis: AnalysisObject
+    write_result: WriteResult
+
 
 # Phase 1
 
@@ -73,25 +86,53 @@ def run_analyze(
 
 # Phase 3 stub
 
-def run_write(analysis: AnalysisObject, root_path: Path, output_path: Path | None = None) -> Path:
-    raise NotImplementedError("Phase 3 coming up soon!")
+def run_write(
+    analysis:  AnalysisObject,
+    snapshot:  RepoSnapshot,
+    root_path: Path,
+    output:    Path | None = None,
+    template:  str         = "default",
+    dry_run:   bool        = False,
+) -> WriteResult:
+    
+    return write_readme(
+        analysis = analysis,
+        snapshot = snapshot,
+        root     = root_path.resolve(),
+        output   = output,
+        template = template,
+        dry_run  = dry_run,
+    )
 
 
 # Full Pipeline
 
 def run_generate(
-        root_path: Path,
-        output: Path | None = None,
-        use_cache: bool = False,
-) -> tuple[RepoSnapshot, AnalysisObject]:
-    
+    root_path: Path,
+    output:    Path | None = None,
+    template:  str         = "default",
+    dry_run:   bool        = False,
+    use_cache: bool        = False,
+) -> GenerateResult:
+
     root_path = root_path.resolve()
-
-    snapshot = run_scan(root_path, use_cache=use_cache)
-
-    analysis = run_analyze(snapshot, root_path, use_cache=use_cache)
-
-    return snapshot, analysis
+ 
+    snapshot     = run_scan(root_path, use_cache=use_cache)
+    analysis     = run_analyze(snapshot, root_path, use_cache=use_cache)
+    write_result = run_write(
+        analysis  = analysis,
+        snapshot  = snapshot,
+        root_path = root_path,
+        output    = output,
+        template  = template,
+        dry_run   = dry_run,
+    )
+ 
+    return GenerateResult(
+        snapshot     = snapshot,
+        analysis     = analysis,
+        write_result = write_result,
+    )
 
 
 # save_analysis and load_analysis calls

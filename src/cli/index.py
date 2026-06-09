@@ -6,19 +6,16 @@ Commands:
 """
 
 from pathlib import Path
-from collections import Counter
+from typing import Optional
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.rule import Rule
+from rich.table import Table
 from rich.text import Text
-from rich.columns import Columns
 from rich import box
-from typing import Optional
-
-from ..orchestrator import run_scan, run_generate
-from ..analyzer.router import status as get_status
+ 
+from ..orchestrator import run_scan, run_generate, GenerateResult
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -30,55 +27,42 @@ cli = typer.Typer(
 console = Console()
 
 
-# ── scan command ──────────────────────────────────────────────────────────────
-
-@cli.command()
-def scan(
-    path: Path = typer.Argument(default=".", help="Path to the repository to scan."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all collected files."),
-    no_cache: bool = typer.Option(False, "--no-cache", help="Force re-scan even if snapshot exists."),
-):
-    
-    root = path.resolve()
-    if not root.exists()or not root.is_dir():
-        console.print(f"[red]✗[/red] Invalid path: [bold]{root}[/bold]")
-        raise typer.Exit(code=1)
-
-    console.print()
-
-    with console.status(f"[bold cyan]Phase 1[/bold cyan] [dim] scanning {root.name}...[/dim]", spinner="dots",):
-        snapshot = run_scan(root, use_cache=not no_cache)
-
-    _print_snapshot_summary(snapshot, root)
+# ── generate ──────────────────────────────────────────────────────────────────
  
-    if verbose:
-        _print_file_table(snapshot)
- 
-    snap_path = root / ".readmegen" / "snapshot.json"
-    console.print(f"\n  [dim]Snapshot →[/dim] [green]{snap_path}[/green]")
-    console.print(
-        f"\n[green]✓[/green] Phase 1 complete. "
-        f"Run [bold cyan]readmegen generate {path}[/bold cyan] to analyze.\n"
-    )
-
-
-# ── generate command ──────────────────────────────────────────────────────────
-
 @cli.command()
-
 def generate(
-    path: Path = typer.Argument(default=".", help="Path to the repository."),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output path for README."),
-    no_cache: bool = typer.Option(False, "--no-cache", help="Force re-scan and re-analyze."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Print analysis to terminal, no files written."),
+    path: Path = typer.Argument(
+        default=".",
+        help="Path to the repository.",
+    ),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o",
+        help="Output path for the README. Defaults to <path>/README.md.",
+    ),
+    template: str = typer.Option(
+        "default", "--template", "-t",
+        help="Template to use: 'default', 'minimal', or a path to a .md file.",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run",
+        help="Preview the README in terminal without writing to disk.",
+    ),
+    no_cache: bool = typer.Option(
+        False, "--no-cache",
+        help="Force re-scan and re-analyze even if cached results exist.",
+    ),
 ):
+    """
+    Generate a README for a repository.
+    Runs all three phases: scan → analyze → write.
+    """
     root = path.resolve()
     if not root.exists() or not root.is_dir():
         console.print(f"[red]✗[/red] Invalid path: [bold]{root}[/bold]")
         raise typer.Exit(code=1)
-
+ 
     console.print()
-
+ 
     # ── Phase 1 ───────────────────────────────────────────────────────────────
     with console.status(
         "[bold cyan]Phase 1[/bold cyan] [dim]scanning repository...[/dim]",
@@ -87,20 +71,21 @@ def generate(
         from ..orchestrator import run_scan as _scan
         snapshot = _scan(root, use_cache=not no_cache)
  
+    frameworks = ", ".join(snapshot.all_frameworks) if snapshot.all_frameworks else "no frameworks detected"
     console.print(
-        f"[green]✓[/green] Phase 1 — "
+        f"[green]✓[/green] Phase 1 [dim]—[/dim] "
         f"[bold]{snapshot.file_count}[/bold] files  "
-        f"[bold]{snapshot.primary_language}[/bold]  "
-        f"[bold]{', '.join(snapshot.all_frameworks) or 'no frameworks detected'}[/bold]"
+        f"[cyan]{snapshot.primary_language}[/cyan]  "
+        f"[dim]{frameworks}[/dim]"
     )
  
     # ── Phase 2 ───────────────────────────────────────────────────────────────
-    from ..analyzer.router import status as backend_status
-    bs = backend_status()
+    from ..analyzer.router import status as get_backend_status
+    bs = get_backend_status()
     backend_label = (
         f"Ollama [dim]({bs['ollama_model']})[/dim]" if bs["will_use"] == "ollama"
-        else f"Groq [dim]({bs['groq_model']})[/dim]"   if bs["will_use"] == "groq"
-        else "no backend"
+        else f"Groq [dim]({bs['groq_model']})[/dim]" if bs["will_use"] == "groq"
+        else "[red]no backend configured[/red]"
     )
  
     with console.status(
@@ -114,78 +99,66 @@ def generate(
             console.print(f"\n[red]✗[/red] Phase 2 failed: {e}\n")
             raise typer.Exit(code=1)
  
-    # ── Phase 2 result ────────────────────────────────────────────────────────
-    parse_indicator = (
-        "[green]✓[/green]" if analysis.parse_success
-        else f"[yellow]⚠[/yellow] [dim](partial — method: {analysis.parse_method})[/dim]"
+    parse_note = (
+        "" if analysis.parse_success
+        else f" [yellow]⚠ partial parse ({analysis.parse_method})[/yellow]"
     )
     console.print(
-        f"{parse_indicator} Phase 2 — analysis complete  "
-        f"[dim]method: {analysis.parse_method}[/dim]"
+        f"[green]✓[/green] Phase 2 [dim]—[/dim] "
+        f"analysis complete  "
+        f"[dim]method: {analysis.parse_method}[/dim]{parse_note}"
     )
  
-    console.print()
+    # ── Phase 3 ───────────────────────────────────────────────────────────────
+    from ..orchestrator import run_write as _write
+    write_result = _write(
+        analysis  = analysis,
+        snapshot  = snapshot,
+        root_path = root,
+        output    = output,
+        template  = template,
+        dry_run   = dry_run,
+    )
  
-    # ── Analysis panel ────────────────────────────────────────────────────────
-    _print_analysis_summary(analysis, dry_run)
- 
-    # ── Saved paths ───────────────────────────────────────────────────────────
     if not dry_run:
-        snap_path     = root / ".readmegen" / "snapshot.json"
-        analysis_path = root / ".readmegen" / "analysis.json"
-        console.print(f"\n  [dim]Snapshot  →[/dim] [green]{snap_path}[/green]")
-        console.print(f"  [dim]Analysis  →[/dim] [green]{analysis_path}[/green]")
+        console.print(
+            f"[green]✓[/green] Phase 3 [dim]—[/dim] "
+            f"README written [dim]→[/dim] "
+            f"[bold green]{write_result.output_path}[/bold green]  "
+            f"[dim]({write_result.line_count} lines)[/dim]"
+        )
  
-    console.print(
-        "\n[yellow]⚠[/yellow]  Phase 3 (README writer) coming next. "
-        "Analysis saved — nothing written yet.\n"
-    )
-
-
-# ── Status Command ───────────────────────────────────────────────────────────────
-
+    # ── Summary panel ─────────────────────────────────────────────────────────
+    if not dry_run:
+        console.print()
+        _print_summary(snapshot, analysis, write_result, root)
+ 
+ 
+# ── scan ──────────────────────────────────────────────────────────────────────
+ 
 @cli.command()
-
-def status():
-    s = get_status()
+def scan(
+    path: Path = typer.Argument(default=".", help="Path to the repository to scan."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all collected files."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Force re-scan."),
+):
+    """Scan a repository and save a snapshot. Phase 1 only."""
+    root = path.resolve()
+    if not root.exists() or not root.is_dir():
+        console.print(f"[red]✗[/red] Invalid path: [bold]{root}[/bold]")
+        raise typer.Exit(code=1)
+ 
     console.print()
-
-    # Plain-text status (no color markup)
-    if s["ollama_running"] and s["ollama_model_ready"]:
-        ollama_status = f"✓ Running — model {s['ollama_model']} ready"
-    elif s["ollama_running"]:
-        ollama_status = f"⚠ Running — but {s['ollama_model']} not pulled — run 'ollama pull {s['ollama_model']}'"
-    else:
-        ollama_status = "✗ Not running — install at https://ollama.com"
-
-    groq_status = (
-        f"✓ Key found — model {s['groq_model']}"
-        if s["groq_available"]
-        else "✗ No GROQ_API_KEY — get a free key at https://console.groq.com"
-    )
-
-    will_use_label = {
-        "ollama": f"Ollama ({s['ollama_model']})",
-        "groq":   f"Groq ({s['groq_model']})",
-        "none":   "None — configure a backend before running generate",
-    }[s["will_use"]]
-
-    t = Text()
-    t.append("  Ollama:    ", style="dim"); t.append(ollama_status + "\n")
-    t.append("  Groq:      ", style="dim"); t.append(groq_status   + "\n\n")
-    t.append("  Will use:  ", style="dim"); t.append(will_use_label)
-
-    console.print(Panel(t, title="Backend Status", border_style="cyan"))
-    console.print()
-
-# DISPLAY HELPERS
-
-def _print_snapshot_summary(snapshot, root: Path) -> None:
+    with console.status(
+        f"[bold cyan]Phase 1[/bold cyan] [dim]scanning {root.name}...[/dim]",
+        spinner="dots",
+    ):
+        snapshot = run_scan(root, use_cache=not no_cache)
+ 
+    # Summary
     s = Text()
-    s.append("  Repo:             ", style="dim")
-    s.append(f"{snapshot.name}\n", style="bold white")
-    s.append("  Primary language: ", style="dim")
-    s.append(f"{snapshot.primary_language}\n", style="cyan")
+    s.append("  Repo:             ", style="dim"); s.append(f"{snapshot.name}\n", style="bold white")
+    s.append("  Primary language: ", style="dim"); s.append(f"{snapshot.primary_language}\n", style="cyan")
     s.append("  Files collected:  ", style="dim")
     s.append(f"{snapshot.file_count}", style="bold green")
     s.append(f"   (skipped {snapshot.skipped_count})\n", style="dim")
@@ -197,72 +170,121 @@ def _print_snapshot_summary(snapshot, root: Path) -> None:
     s.append(f"{len(snapshot.prod_deps)} prod", style="green")
     if snapshot.dev_deps:
         s.append(f"   {len(snapshot.dev_deps)} dev", style="dim")
-    flags = []
-    if snapshot.has_dockerfile: flags.append("Docker")
-    if snapshot.has_tests:      flags.append("Tests")
-    if snapshot.has_ci:         flags.append("CI")
+    flags = [f for f, v in [("Docker", snapshot.has_dockerfile), ("Tests", snapshot.has_tests), ("CI", snapshot.has_ci)] if v]
     if flags:
-        s.append("\n  Detected:         ", style="dim")
+        s.append(f"\n  Detected:         ", style="dim")
         s.append("  ".join(f"[dim]{f}[/dim]" for f in flags))
     console.print(Panel(s, title="[bold]Phase 1 — Scan Results[/bold]", border_style="cyan"))
  
+    if verbose:
+        console.print(Rule("[dim]Collected files[/dim]"))
+        t = Table(box=box.SIMPLE_HEAD, show_header=True, header_style="bold cyan")
+        t.add_column("File", style="white"); t.add_column("Language", style="cyan")
+        t.add_column("KB", justify="right"); t.add_column("Entry", justify="center")
+        for f in snapshot.files:
+            t.add_row(f.path, f.language, str(f.size_kb), "[green]✓[/green]" if f.is_entry_point else "")
+        console.print(t)
  
-def _print_analysis_summary(analysis, dry_run: bool) -> None:
+    snap_path = root / ".readmegen" / "snapshot.json"
+    console.print(f"\n  [dim]Snapshot →[/dim] [green]{snap_path}[/green]")
+    console.print(f"\n[green]✓[/green] Phase 1 complete. Run [bold cyan]readmegen generate {path}[/bold cyan] to generate a README.\n")
+ 
+ 
+# ── status ────────────────────────────────────────────────────────────────────
+ 
+@cli.command()
+def status():
+    """Check which model backend is available (Ollama or Groq)."""
+    from ..analyzer.router import status as get_status
+    s = get_status()
+    console.print()
+ 
+    ollama_status = (
+        f"[green]✓ Running[/green]  model [bold]{s['ollama_model']}[/bold] ready"
+        if s["ollama_running"] and s["ollama_model_ready"] else
+        f"[yellow]⚠ Running[/yellow]  but [bold]{s['ollama_model']}[/bold] not pulled — "
+        f"run [cyan]ollama pull {s['ollama_model']}[/cyan]"
+        if s["ollama_running"] else
+        "[dim]✗ Not running[/dim]  install at https://ollama.com"
+    )
+    groq_status = (
+        f"[green]✓ Key found[/green]  model [bold]{s['groq_model']}[/bold]"
+        if s["groq_available"] else
+        "[dim]✗ No GROQ_API_KEY[/dim]  get a free key at https://console.groq.com"
+    )
+    will_use = {
+        "ollama": f"[green]Ollama ({s['ollama_model']})[/green]",
+        "groq":   f"[cyan]Groq ({s['groq_model']})[/cyan]",
+        "none":   "[red]None — configure a backend before running generate[/red]",
+    }[s["will_use"]]
+ 
+    t = Text()
+    t.append("  Ollama:    ", style="dim"); t.append(ollama_status + "\n")
+    t.append("  Groq:      ", style="dim"); t.append(groq_status   + "\n\n")
+    t.append("  Will use:  ", style="dim"); t.append(will_use)
+    console.print(Panel(t, title="[bold]Backend Status[/bold]", border_style="cyan"))
+    console.print()
+ 
+ 
+# ── Summary panel helper ──────────────────────────────────────────────────────
+ 
+def _print_summary(snapshot, analysis, write_result, root: Path) -> None:
+    """Final summary panel shown after a successful full generate run."""
+ 
+    # Which sections made it into the README
+    section_flags = [
+        ("About",          bool(analysis.purpose)),
+        ("How It Works",   bool(analysis.how_it_works)),
+        ("Tech Stack",     bool(analysis.tech_stack)),
+        ("Prerequisites",  bool(analysis.prerequisites)),
+        ("Installation",   bool(analysis.setup_steps)),
+        ("Usage",          bool(analysis.usage_examples)),
+        ("Env Variables",  bool(analysis.env_variables)),
+        ("API Reference",  bool(analysis.api_endpoints)),
+        ("Scripts",        bool(analysis.scripts)),
+        ("License",        bool(analysis.license)),
+    ]
+    included = [name for name, present in section_flags if present]
+    skipped  = [name for name, present in section_flags if not present]
+ 
     s = Text()
  
-    s.append("  Purpose:      ", style="dim")
-    s.append(f"{analysis.purpose or '—'}\n", style="white")
+    # Output path
+    s.append("  Output:      ", style="dim")
+    s.append(f"{write_result.output_path}\n", style="bold green")
  
-    s.append("  How it works: ", style="dim")
-    s.append(f"{analysis.how_it_works or '—'}\n", style="dim white")
+    # Backup note
+    if write_result.backup_path:
+        s.append("  Backup:      ", style="dim")
+        s.append(f"{write_result.backup_path} [dim](previous README)[/dim]\n")
  
-    if analysis.tech_stack:
-        s.append("  Tech stack:   ", style="dim")
-        s.append(f"{', '.join(analysis.tech_stack)}\n", style="cyan")
+    # Size
+    s.append("  Size:        ", style="dim")
+    s.append(f"{write_result.line_count} lines  {write_result.char_count} chars\n", style="white")
  
-    if analysis.prerequisites:
-        s.append("  Prerequisites:", style="dim")
-        s.append(f" {', '.join(analysis.prerequisites)}\n")
+    # Sections included
+    s.append("  Sections:    ", style="dim")
+    s.append(f"{', '.join(included)}\n", style="green")
  
-    if analysis.setup_steps:
-        s.append("  Setup steps:  ", style="dim")
-        s.append(f"{len(analysis.setup_steps)} steps\n", style="green")
+    # Sections skipped (if any)
+    if skipped:
+        s.append("  Skipped:     ", style="dim")
+        s.append(f"{', '.join(skipped)} [dim](no data)[/dim]\n")
  
-    if analysis.env_variables:
-        s.append("  Env vars:     ", style="dim")
-        names = [e.get("name", "") for e in analysis.env_variables]
-        s.append(f"{', '.join(names)}\n", style="yellow")
+    # Parse quality note
+    if not analysis.parse_success:
+        s.append("\n  [yellow]⚠[/yellow]  Partial analysis [dim]")
+        s.append(f"(method: {analysis.parse_method})[/dim] — review before committing.")
+    else:
+        s.append("\n  [green]✓[/green]  Analysis parsed cleanly [dim]")
+        s.append(f"(method: {analysis.parse_method})[/dim]")
  
-    if analysis.api_endpoints:
-        s.append("  API endpoints:", style="dim")
-        s.append(f" {len(analysis.api_endpoints)} detected\n")
- 
-    if analysis.license:
-        s.append("  License:      ", style="dim")
-        s.append(f"{analysis.license}\n")
- 
-    console.print(Panel(s, title="[bold]Phase 2 — Analysis Results[/bold]", border_style="green"))
- 
-    # Setup steps detail
-    if analysis.setup_steps and dry_run:
-        console.print(Rule("[dim]Setup steps[/dim]"))
-        for i, step in enumerate(analysis.setup_steps, 1):
-            console.print(f"  [dim]{i}.[/dim] {step}")
- 
- 
-def _print_file_table(snapshot) -> None:
-    console.print(Rule("[dim]Collected files[/dim]"))
-    t = Table(box=box.SIMPLE_HEAD, show_header=True, header_style="bold cyan")
-    t.add_column("File", style="white")
-    t.add_column("Language", style="cyan")
-    t.add_column("KB", justify="right")
-    t.add_column("Entry", justify="center")
-    for f in snapshot.files:
-        t.add_row(
-            f.path, f.language, str(f.size_kb),
-            "[green]✓[/green]" if f.is_entry_point else "",
-        )
-    console.print(t)
+    console.print(Panel(
+        s,
+        title="[bold]Generate Complete[/bold]",
+        border_style="green",
+    ))
+    console.print()
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
