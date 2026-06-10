@@ -43,7 +43,7 @@ def write(
         snapshot: RepoSnapshot,
         root: Path,
         output: Path | None = None,
-        template: str = "default",
+        template: str = "standard",
         dry_run: bool = False,
 ) -> WriteResult:
     

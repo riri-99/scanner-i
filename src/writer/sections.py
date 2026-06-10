@@ -149,10 +149,10 @@ def render_installation(analysis: AnalysisObject) -> str:
             lines.append(f"{i}. Run:")
             lines.append("")
             lines.append("  ```bash")
-            lines.append("  {clean}")
+            lines.append(f"  {clean}")
             lines.append("  ```")
         else:
-            lines.append(f"{i}. Run:")
+            lines.append(f"{i}. {clean}")
 
         lines.append("")
 
@@ -163,13 +163,20 @@ def render_installation(analysis: AnalysisObject) -> str:
 def render_usage(analysis: AnalysisObject) -> str:
 
     # usage exapmles as code block
-    examples = [e.strip() for e in analysis.usage_examples if e.strip()]
+    examples = [e for e in analysis.usage_examples if e.get("example", "").strip()]
     if not examples:
         return ""
     
     lines = ["## Usage", ""]
 
-    for example in examples:
+    for item in examples:
+        example = item.get("example", "").strip()
+        explanation = item.get("explanation", "").strip()
+
+        if explanation:
+            lines.append(explanation)
+            lines.append("")
+
         lang = _infer_code_lang(example)
         lines.append(f"```{lang}")
         lines.append(example)

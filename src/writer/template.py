@@ -14,7 +14,7 @@ from . import sections as sec
 # Buil in template directory
 
 _TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates"
-BUILTIN_TEMPLATES = ("default", "minimal")
+BUILTIN_TEMPLATES = ("minimal", "standard", "professional", "detailed")
 
 
 # Public API
@@ -22,7 +22,7 @@ BUILTIN_TEMPLATES = ("default", "minimal")
 def render(
         analysis: AnalysisObject,
         snapshot: RepoSnapshot,
-        template: str = "default",
+        template: str = "standard",
 ) -> str:
     
     # Build section context

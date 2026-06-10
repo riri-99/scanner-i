@@ -117,8 +117,9 @@ def _build_metadata(snapshot: RepoSnapshot) -> str:
     if snapshot.entry_points:
         lines.append(f"Entry points:     {', '.join(snapshot.entry_points)}")
  
-    # Ecosystem scripts (e.g. npm run dev, npm run build)
+    # Ecosystem scripts and source files
     for eco in snapshot.ecosystems:
+        lines.append(f"Ecosystem:        {eco.ecosystem} (via {eco.source_file})")
         if eco.scripts:
             script_list = ", ".join(f"{k}: {v}" for k, v in list(eco.scripts.items())[:6])
             lines.append(f"Scripts ({eco.ecosystem}): {script_list}")

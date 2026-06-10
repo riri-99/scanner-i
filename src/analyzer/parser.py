@@ -31,7 +31,7 @@ class AnalysisObject(BaseModel):
     tech_stack: list[str] = Field(default_factory=list)
     prerequisites: list[str] = Field(default_factory=list)
     setup_steps: list[str] = Field(default_factory=list)
-    usage_examples: list[str] = Field(default_factory=list)
+    usage_examples: list[dict] = Field(default_factory=list)
     env_variables: list[dict] = Field(default_factory=list)
     api_endpoints: list[str] = Field(default_factory=list)
     scripts: dict[str, str] = Field(default_factory=dict)
@@ -43,7 +43,7 @@ class AnalysisObject(BaseModel):
 
     # Validators
     
-    @field_validator("tech_stack", "prerequisites", "setup_steps", "usage_examples", "api_endpoints", mode="before")
+    @field_validator("tech_stack", "prerequisites", "setup_steps", "api_endpoints", mode="before")
     @classmethod
     def ensure_str_list(cls, v: Any) -> list[str]:
         if v is None:
@@ -53,6 +53,25 @@ class AnalysisObject(BaseModel):
         if isinstance(v, list):
             return[str(item).strip() for item in v if item and str(item).strip()]
         return[]
+
+    @field_validator("usage_examples", mode="before")
+    @classmethod
+    def ensure_usage_list(cls, v: Any) -> list[dict]:
+        if not v or not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, dict) and item:
+                result.append({
+                    "example": str(item.get("example", item.get("command", item.get("code", "")))),
+                    "explanation": str(item.get("explanation", item.get("desc", ""))),
+                })
+            elif isinstance(item, str) and item.strip():
+                result.append({
+                    "example": item.strip(),
+                    "explanation": "",
+                })
+        return result
     
     @field_validator("env_variables", mode="before")
     @classmethod
@@ -181,7 +200,7 @@ def _try_regex(text: str) -> AnalysisObject | None:
             if match:
                 fields[field] = match.group(1).strip()
 
-        for field in ("tech_stack", "prerequisites", "setup_steps", "usage_examples", "api_endpoints"):
+        for field in ("tech_stack", "prerequisites", "setup_steps", "api_endpoints"):
             pattern = rf'"{field}"\s*:\s*\[([^\]]*)\]'
             match = re.search(pattern, text, re.DOTALL)
             if match:

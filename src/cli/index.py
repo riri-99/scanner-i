@@ -13,9 +13,10 @@ from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
+from rich.prompt import Prompt
 from rich import box
  
-from ..orchestrator import run_scan, run_generate, GenerateResult
+from ..orchestrator import run_scan, run_generate
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,64 @@ cli = typer.Typer(
 )
 console = Console()
 
+
+TEMPLATES = {
+    "1": {
+        "key":         "minimal",
+        "label":       "Minimal",
+        "description": "Title, About, Installation, Usage, License — clean and simple",
+        "color":       "dim",
+    },
+    "2": {
+        "key":         "standard",
+        "label":       "Standard",
+        "description": "All sections with moderate detail — good for most projects",
+        "color":       "cyan",
+    },
+    "3": {
+        "key":         "professional",
+        "label":       "Professional",
+        "description": "Polished, production-quality with horizontal rules and full detail",
+        "color":       "green",
+    },
+    "4": {
+        "key":         "detailed",
+        "label":       "Detailed",
+        "description": "Maximum depth — table of contents, every section, exhaustive",
+        "color":       "magenta",
+    },
+}
+ 
+ 
+def _select_template() -> str:
+    """
+    Interactive template selector shown when --template is not passed.
+    Returns the chosen template key e.g. "professional".
+    """
+    console.print()
+    console.print("  [bold]Choose a README template:[/bold]")
+    console.print()
+ 
+    for num, tmpl in TEMPLATES.items():
+        console.print(
+            f"  [{tmpl['color']}][bold]{num}[/bold]. {tmpl['label']}[/{tmpl['color']}]"
+            f"  [dim]{tmpl['description']}[/dim]"
+        )
+ 
+    console.print()
+ 
+    while True:
+        choice = Prompt.ask(
+            "  [bold cyan]Select[/bold cyan]",
+            choices=list(TEMPLATES.keys()),
+            default="2",
+        )
+        tmpl = TEMPLATES.get(choice)
+        if tmpl:
+            console.print(
+                f"\n  [dim]Using[/dim] [bold]{tmpl['label']}[/bold] template.\n"
+            )
+            return tmpl["key"]
 
 # ── generate ──────────────────────────────────────────────────────────────────
  
@@ -39,9 +98,10 @@ def generate(
         None, "--output", "-o",
         help="Output path for the README. Defaults to <path>/README.md.",
     ),
-    template: str = typer.Option(
-        "default", "--template", "-t",
-        help="Template to use: 'default', 'minimal', or a path to a .md file.",
+    template: Optional[str] = typer.Option(
+        None, "--template", "-t",
+        help="Template style: minimal, standard, professional, detailed. "
+             "Skips the interactive selector if provided.",
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run",
@@ -61,7 +121,20 @@ def generate(
         console.print(f"[red]✗[/red] Invalid path: [bold]{root}[/bold]")
         raise typer.Exit(code=1)
  
-    console.print()
+    valid_keys = {t["key"] for t in TEMPLATES.values()}
+ 
+    if template is not None:
+        # Could be a built-in key or a file path
+        if template not in valid_keys and not Path(template).exists():
+            console.print(
+                f"[red]✗[/red] Unknown template: [bold]{template}[/bold]\n"
+                f"  Built-in options: {', '.join(sorted(valid_keys))}\n"
+                f"  Or pass a path to a custom .md file."
+            )
+            raise typer.Exit(code=1)
+        chosen_template = template
+    else:
+        chosen_template = _select_template()
  
     # ── Phase 1 ───────────────────────────────────────────────────────────────
     with console.status(
@@ -94,7 +167,7 @@ def generate(
     ):
         from ..orchestrator import run_analyze as _analyze
         try:
-            analysis = _analyze(snapshot, root, use_cache=not no_cache)
+            analysis = _analyze(snapshot, root, use_cache=not no_cache, template = chosen_template)
         except Exception as e:
             console.print(f"\n[red]✗[/red] Phase 2 failed: {e}\n")
             raise typer.Exit(code=1)
@@ -116,7 +189,7 @@ def generate(
         snapshot  = snapshot,
         root_path = root,
         output    = output,
-        template  = template,
+        template  = chosen_template,
         dry_run   = dry_run,
     )
  
@@ -131,7 +204,7 @@ def generate(
     # ── Summary panel ─────────────────────────────────────────────────────────
     if not dry_run:
         console.print()
-        _print_summary(snapshot, analysis, write_result, root)
+        _print_summary(snapshot, analysis, write_result, chosen_template)
  
  
 # ── scan ──────────────────────────────────────────────────────────────────────
@@ -228,7 +301,7 @@ def status():
  
 # ── Summary panel helper ──────────────────────────────────────────────────────
  
-def _print_summary(snapshot, analysis, write_result, root: Path) -> None:
+def _print_summary(snapshot, analysis, write_result, chosen_template: Path) -> None:
     """Final summary panel shown after a successful full generate run."""
  
     # Which sections made it into the README
@@ -246,6 +319,11 @@ def _print_summary(snapshot, analysis, write_result, root: Path) -> None:
     ]
     included = [name for name, present in section_flags if present]
     skipped  = [name for name, present in section_flags if not present]
+
+    tmpl_label = next(
+        (t["label"] for t in TEMPLATES.values() if t["key"] == chosen_template),
+        chosen_template,
+    )
  
     s = Text()
  
@@ -257,6 +335,10 @@ def _print_summary(snapshot, analysis, write_result, root: Path) -> None:
     if write_result.backup_path:
         s.append("  Backup:      ", style="dim")
         s.append(f"{write_result.backup_path} [dim](previous README)[/dim]\n")
+
+    
+    s.append("  Template:    ", style="dim")
+    s.append(f"{tmpl_label}\n", style="cyan")
  
     # Size
     s.append("  Size:        ", style="dim")

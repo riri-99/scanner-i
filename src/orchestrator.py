@@ -56,6 +56,7 @@ def run_analyze(
         snapshot: RepoSnapshot,
         root_path: Path,
         use_cache: bool = False,
+        template: str = "standard",
 ) -> AnalysisObject:
     
     root_path = root_path.resolve()
@@ -67,7 +68,7 @@ def run_analyze(
     
     # 1. build context and prompts
     context_str = build_context(snapshot)
-    system, user = build_prompts(context_str)
+    system, user = build_prompts(context_str, template=template)
 
     # 2. pick backend
     client = get_client()
@@ -91,7 +92,7 @@ def run_write(
     snapshot:  RepoSnapshot,
     root_path: Path,
     output:    Path | None = None,
-    template:  str         = "default",
+    template:  str         = "standard",
     dry_run:   bool        = False,
 ) -> WriteResult:
     
@@ -110,7 +111,7 @@ def run_write(
 def run_generate(
     root_path: Path,
     output:    Path | None = None,
-    template:  str         = "default",
+    template:  str         = "standard",
     dry_run:   bool        = False,
     use_cache: bool        = False,
 ) -> GenerateResult:
