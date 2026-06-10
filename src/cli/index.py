@@ -243,10 +243,17 @@ def scan(
     s.append(f"{len(snapshot.prod_deps)} prod", style="green")
     if snapshot.dev_deps:
         s.append(f"   {len(snapshot.dev_deps)} dev", style="dim")
+    
+    # Flags Rendering
     flags = [f for f, v in [("Docker", snapshot.has_dockerfile), ("Tests", snapshot.has_tests), ("CI", snapshot.has_ci)] if v]
     if flags:
-        s.append(f"\n  Detected:         ", style="dim")
-        s.append("  ".join(f"[dim]{f}[/dim]" for f in flags))
+        s.append("\n  Detected:         ", style="dim")
+        for i, f in enumerate(flags):
+            s.append(f)
+            if i < len(flags) - 1:
+                s.append("  ")
+        s.stylize("dim", start=s.plain.rfind("Detected:") + 9)
+
     console.print(Panel(s, title="[bold]Phase 1 — Scan Results[/bold]", border_style="cyan"))
  
     if verbose:
@@ -270,30 +277,48 @@ def status():
     """Check which model backend is available (Ollama or Groq)."""
     from ..analyzer.router import status as get_status
     s = get_status()
+    _print_backend_status(s)
+
+def _print_backend_status(s: dict) -> None:
     console.print()
  
-    ollama_status = (
-        f"[green]✓ Running[/green]  model [bold]{s['ollama_model']}[/bold] ready"
-        if s["ollama_running"] and s["ollama_model_ready"] else
-        f"[yellow]⚠ Running[/yellow]  but [bold]{s['ollama_model']}[/bold] not pulled — "
-        f"run [cyan]ollama pull {s['ollama_model']}[/cyan]"
-        if s["ollama_running"] else
-        "[dim]✗ Not running[/dim]  install at https://ollama.com"
-    )
-    groq_status = (
-        f"[green]✓ Key found[/green]  model [bold]{s['groq_model']}[/bold]"
-        if s["groq_available"] else
-        "[dim]✗ No GROQ_API_KEY[/dim]  get a free key at https://console.groq.com"
-    )
-    will_use = {
-        "ollama": f"[green]Ollama ({s['ollama_model']})[/green]",
-        "groq":   f"[cyan]Groq ({s['groq_model']})[/cyan]",
-        "none":   "[red]None — configure a backend before running generate[/red]",
-    }[s["will_use"]]
+    ollama_t = Text()
+    if s["ollama_running"]:
+        if s["ollama_model_ready"]:
+            ollama_t.append("✓ Running", style="green")
+            ollama_t.append("  model ")
+            ollama_t.append(s["ollama_model"], style="bold")
+            ollama_t.append(" ready")
+        else:
+            ollama_t.append("⚠ Running", style="yellow")
+            ollama_t.append("  but ")
+            ollama_t.append(s["ollama_model"], style="bold")
+            ollama_t.append(" not pulled — run ")
+            ollama_t.append(f"ollama pull {s['ollama_model']}", style="cyan")
+    else:
+        ollama_t.append("✗ Not running", style="dim")
+        ollama_t.append("  install at https://ollama.com")
+
+    groq_t = Text()
+    if s["groq_available"]:
+        groq_t.append("✓ Key found", style="green")
+        groq_t.append("  model ")
+        groq_t.append(s["groq_model"], style="bold")
+    else:
+        groq_t.append("✗ No GROQ_API_KEY", style="dim")
+        groq_t.append("  get a free key at https://console.groq.com")
+
+    will_use = Text()
+    if s["will_use"] == "ollama":
+        will_use.append(f"Ollama ({s['ollama_model']})", style="green")
+    elif s["will_use"] == "groq":
+        will_use.append(f"Groq ({s['groq_model']})", style="cyan")
+    else:
+        will_use.append("None — configure a backend before running generate", style="red")
  
     t = Text()
-    t.append("  Ollama:    ", style="dim"); t.append(ollama_status + "\n")
-    t.append("  Groq:      ", style="dim"); t.append(groq_status   + "\n\n")
+    t.append("  Ollama:    ", style="dim"); t.append(ollama_t); t.append("\n")
+    t.append("  Groq:      ", style="dim"); t.append(groq_t);   t.append("\n\n")
     t.append("  Will use:  ", style="dim"); t.append(will_use)
     console.print(Panel(t, title="[bold]Backend Status[/bold]", border_style="cyan"))
     console.print()
@@ -334,7 +359,8 @@ def _print_summary(snapshot, analysis, write_result, chosen_template: Path) -> N
     # Backup note
     if write_result.backup_path:
         s.append("  Backup:      ", style="dim")
-        s.append(f"{write_result.backup_path} [dim](previous README)[/dim]\n")
+        s.append(f"{write_result.backup_path} ")
+        s.append("(previous README)\n", style="dim")
 
     
     s.append("  Template:    ", style="dim")
@@ -351,15 +377,21 @@ def _print_summary(snapshot, analysis, write_result, chosen_template: Path) -> N
     # Sections skipped (if any)
     if skipped:
         s.append("  Skipped:     ", style="dim")
-        s.append(f"{', '.join(skipped)} [dim](no data)[/dim]\n")
+        s.append(f"{', '.join(skipped)} ")
+        s.append("(no data)\n", style="dim")
  
     # Parse quality note
     if not analysis.parse_success:
-        s.append("\n  [yellow]⚠[/yellow]  Partial analysis [dim]")
-        s.append(f"(method: {analysis.parse_method})[/dim] — review before committing.")
+        s.append("\n  ")
+        s.append("⚠", style="yellow")
+        s.append("  Partial analysis ")
+        s.append(f"(method: {analysis.parse_method})", style="dim")
+        s.append(" — review before committing.")
     else:
-        s.append("\n  [green]✓[/green]  Analysis parsed cleanly [dim]")
-        s.append(f"(method: {analysis.parse_method})[/dim]")
+        s.append("\n  ")
+        s.append("✓", style="green")
+        s.append("  Analysis parsed cleanly ")
+        s.append(f"(method: {analysis.parse_method})", style="dim")
  
     console.print(Panel(
         s,
@@ -376,4 +408,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
