@@ -67,7 +67,7 @@ Critical output rules — follow exactly:
   - IMPORTANT: Use the detected configuration files (e.g. pyproject.toml, package.json, Cargo.toml) as the primary source for installation commands. 
     If you see 'pyproject.toml', use it instead of assuming 'requirements.txt' exists.
   BAD:  "Install dependencies"
-  GOOD: "pip install -r requirements.txt" (only if requirements.txt is actually in the file list)
+  GOOD: "pip install -r requirements.txt" (IMPORTANT: only if requirements.txt is actually in the file list, if not check for other setup files as mentioned.)
   GOOD: "pip install ." (if pyproject.toml or setup.py is present)
   GOOD: "pip install fastapi uvicorn"
   BAD:  "Configure environment variables"

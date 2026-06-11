@@ -26,6 +26,7 @@ from pathlib import Path
 
 import urllib.request
 import urllib.error
+import webbrowser
 
 from rich.console import Console
 from rich.panel import Panel
@@ -36,18 +37,16 @@ from .groq_client import GroqClient
 
 # config
 
-_CONFIG_PATH = Path(__file__).parent.parent.parent / "config.json"
-
-with open(_CONFIG_PATH) as _f:
-    _CFG = json.load(_f)["model"]
-
-OLLAMA_HOST: str = _CFG["ollama_host"]
-OLLAMA_MODEL: str = _CFG["ollama_model"]
-GROQ_MODEL: str = _CFG["groq_model"]
-TEMPERATURE: float = _CFG["temperature"]
-TIMEOUT: int = _CFG["timeout_secs"]
-PREFERRED: str = _CFG["preferred"]
-
+from ..utils.config import get as _get_config
+_CFG = _get_config("model")
+ 
+OLLAMA_HOST:   str   = _CFG["ollama_host"]
+OLLAMA_MODEL:  str   = _CFG["ollama_model"]
+GROQ_MODEL:    str   = _CFG["groq_model"]
+TEMPERATURE:   float = _CFG["temperature"]
+TIMEOUT:       int   = _CFG["timeout_secs"]
+PREFERRED:     str   = _CFG["preferred"]   # "ollama" | "groq"
+ 
 console = Console()
 
 # Publi API
