@@ -1,4 +1,4 @@
-# Readmegen
+# Scanner I
 
 ![Language](https://img.shields.io/badge/Language-Python-3776ab)
 
@@ -20,46 +20,45 @@
 
 ## About
 
-AI-powered README generator for public GitHub repositories, providing a clear and compelling project description.
+This project is an AI-powered README generator, designed for senior software engineers to analyze a repository context and extract structured information for a README file, targeting public GitHub repositories.
 
 ## How It Works
 
-The project uses a combination of natural language processing and machine learning models to analyze the repository context and extract structured information for a README file. It utilizes a decision sequence to pick the right model backend, either Ollama or Groq, and returns a ready-to-use client. The project follows a strict output contract, providing raw JSON output with every field present.
+The project utilizes a decision layer that picks the right model backend, either Ollama or Groq, based on the preferred model specified in the config.json file. It then uses the chosen model to generate a README file by analyzing the repository context and extracting relevant information. The project consists of several components, including a scanner, analyzer, and router, which work together to generate the README file. The scanner gathers information about the repository, the analyzer processes this information and generates a context string, and the router decides which model to use. The project also includes a parser that takes the model's output and converts it into a validated AnalysisObject, which is then used to generate the README file.
 
 ## Teck Stack
 
 - Python 3.11
-- Typer
-- Rich
-- Pathspec
-- Pydantic
-- Jinja2
-- Ollama
-- Groq
+- Typer 0.12
+- Rich 13
+- Pathspec 0.12
+- Pydantic 2
+- Jinja2 3
 
 ## Prerequisites
 
 - Python 3.11+
 - pip
+- Git
 
 ## Installation
 
 1. Run:
 
   ```bash
-  git clone https://github.com/owner/readmegen
+  git clone https://github.com/owner/repo
   ```
 
 2. Run:
 
   ```bash
-  cd readmegen
+  cd repo
   ```
 
 3. Run:
 
   ```bash
-  pip install .
+  pip install -r requirements.txt
   ```
 
 4. Run:
@@ -68,25 +67,37 @@ The project uses a combination of natural language processing and machine learni
   cp .env.example .env
   ```
 
+5. Run:
+
+  ```bash
+  pip install .
+  ```
+
 ## Usage
 
-Scan a repository and show results
+Generate a README file for the current repository
 
 ```bash
-readmegen scan <path>
+readmegen
 ```
 
-Generate a README file for a repository
+Generate a README file for a specific repository
 
 ```bash
-readmegen generate <path>
+readmegen --repo https://github.com/owner/repo
+```
+
+Generate a README file with a specific model
+
+```bash
+readmegen --model groq
 ```
 
 ## Scripts
 
 | Command | Description |
 |---|---|
-| `readmegen` | AI-powered README generator |
+| `readmegen` | Generate a README file for the current repository |
 
 ## Contributing
 

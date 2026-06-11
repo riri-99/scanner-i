@@ -18,13 +18,13 @@ _SCHEMA = """{
     "purpose": "One clear sentence: what does this project do and who is it for?",
   "how_it_works": "2-3 sentences describing the architecture and how the main components fit together.",
   "tech_stack": [
-    "List every technology with its version if detectable e.g. Python 3.11, FastAPI 0.100, PostgreSQL 15"
+    "List every technology with its version if detectable e.g. Python 3.11, FastAPI 0.100, PostgreSQL 15, along with it's purpose in the project"
   ],
   "prerequisites": [
     "Exact software the user must install before setup e.g. Python 3.11+, Node.js 18+, Docker, PostgreSQL"
   ],
   "setup_steps": [
-    "IMPORTANT: every step must be a real, runnable shell command. NO prose instructions.",
+    "IMPORTANT: every step must be a real, runnable shell command. Provide explanations and instructions as well along with the shell commands.",
     "e.g. git clone https://github.com/owner/repo",
     "e.g. cd repo",
     "e.g. pip install -r requirements.txt",
@@ -33,6 +33,7 @@ _SCHEMA = """{
   ],
   "usage_examples": [
     {
+      "IMPORTANT: must include explanation with each example"
       "explanation": "A short sentence explaining what this example demonstrates or how the command works",
       "example": "A realistic, runnable command or code snippet showing the primary use case"
     }
@@ -80,7 +81,7 @@ _MINIMAL_INSTRUCTIONS = """\
 Focus only on the essentials:
 - purpose: 2-3 sentences
 - setup_steps: the minimum commands to get it running
-- usage_examples: one primary example only
+- usage_examples: realistic examples showing the main workflow
 - Skip api_endpoints and env_variables unless critical to basic usage
 - Add a fallback "Getting Started" combined section that merges prerequisites + installation \
 """
