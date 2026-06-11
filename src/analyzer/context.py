@@ -37,6 +37,12 @@ CONFIG_FILENAMES: set[str] = {
     ".github/workflows",
 }
 
+# README file signatures
+README_FILENAMES: set[str] = {
+    "readme.md", "readme.txt", "readme",
+    "readme.rst", "readme.adoc"
+}
+
 # Test file signals
 TEST_SIGNALS: tuple[str, ...] = ("test", "spec", "_test.", "tests/", "__tests__/")
 
@@ -54,9 +60,17 @@ def build(snapshot: RepoSnapshot, char_budget: int = CHAR_BUDGET) -> str:
     remaining -= len(metadata)
 
     # Categorise files
-    entry_files, config_files, source_files, test_files = _categorise(snapshot.files)
+    readme_files, entry_files, config_files, source_files, test_files = _categorise(snapshot.files)
 
-    # 2. Entry point files
+    # 2. Existing README
+    remaining = _add_files(
+        files = readme_files,
+        sections = sections,
+        remaining = remaining,
+        label = "existing readme"
+    )
+
+    # 3. Entry point files
     remaining = _add_files(
         files = entry_files,
         sections = sections,
@@ -141,13 +155,14 @@ def _build_metadata(snapshot: RepoSnapshot) -> str:
 def _categorise(
     files: list[FileSnapshot],
 ) -> tuple[
+    list[FileSnapshot],  # readme
     list[FileSnapshot],  # entry points
     list[FileSnapshot],  # config files
     list[FileSnapshot],  # regular source files
     list[FileSnapshot],  # test files
 ]:
     
-    entry, config, source, tests = [], [], [], []
+    readme, entry, config, source, tests = [], [], [], [], []
  
     for f in files:
         # Never include our own runtime output as context
@@ -156,8 +171,11 @@ def _categorise(
  
         path_lower = f.path.lower()
         name_lower = Path(f.path).name.lower()
+
+        if name_lower in README_FILENAMES:
+            readme.append(f)
  
-        if f.is_entry_point:
+        elif f.is_entry_point:
             entry.append(f)
  
         elif _is_test_file(path_lower):
@@ -170,10 +188,10 @@ def _categorise(
             source.append(f)
  
     # Within each bucket, shorter paths first (top-level files before deeply nested ones)
-    for bucket in (entry, config, source, tests):
+    for bucket in (readme, entry, config, source, tests):
         bucket.sort(key=lambda f: (f.path.count("/"), f.path))
  
-    return entry, config, source, tests
+    return readme, entry, config, source, tests
  
  
 def _is_test_file(path_lower: str) -> bool:
@@ -215,7 +233,7 @@ def _format_file_block(f: FileSnapshot, label: str | None) -> str:
 
 # Diagnostic helper
 def stats(snapshot: RepoSnapshot, char_budget: int = CHAR_BUDGET) -> dict:
-    entry, config, source, tests = _categorise(snapshot.files)
+    readme, entry, config, source, tests = _categorise(snapshot.files)
     metadata_len = len(_build_metadata(snapshot))
  
     def total_chars(files: list[FileSnapshot]) -> int:
@@ -224,6 +242,8 @@ def stats(snapshot: RepoSnapshot, char_budget: int = CHAR_BUDGET) -> dict:
     return {
         "char_budget":    char_budget,
         "metadata_chars": metadata_len,
+        "readme_files":   len(readme),
+        "readme_chars":   total_chars(readme),
         "entry_files":    len(entry),
         "entry_chars":    total_chars(entry),
         "config_files":   len(config),
@@ -232,6 +252,6 @@ def stats(snapshot: RepoSnapshot, char_budget: int = CHAR_BUDGET) -> dict:
         "source_chars":   total_chars(source),
         "test_files":     len(tests),
         "test_chars":     total_chars(tests),
-        "total_chars":    total_chars(entry + config + source + tests) + metadata_len,
-        "fits_in_budget": (total_chars(entry + config + source + tests) + metadata_len) <= char_budget,
+        "total_chars":    total_chars(readme + entry + config + source + tests) + metadata_len,
+        "fits_in_budget": (total_chars(readme + entry + config + source + tests) + metadata_len) <= char_budget,
     }

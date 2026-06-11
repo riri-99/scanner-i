@@ -20,6 +20,7 @@ with open(_CONFIG_PATH) as f:
 MAX_FILE_SIZE_KB: int = _CFG["max_file_size_kb"]
 MAX_FILES: int = _CFG["max_files"]
 MAX_CONTENT_CHARS: int = _CFG["max_file_content_chars"]
+MAX_ENTRY_POINT_CHARS: int = _CFG.get("max_entry_point_chars", MAX_CONTENT_CHARS)
 
 
 # Known entry point filenames to prioritize
@@ -126,8 +127,12 @@ def walk(root_path: Path) -> WalkResult:
             result.skipped_reasons["too large"] = result.skipped_reasons.get("too large", 0) + 1
             continue
 
+        # Determine if it is an entry point before reading
+        is_entry_point = path.name in ENTRY_POINT_NAMES
+        limit = MAX_ENTRY_POINT_CHARS if is_entry_point else MAX_CONTENT_CHARS
+
         # Read content
-        content, is_truncated = _read_file(path)
+        content, is_truncated = _read_file(path, limit)
         if content is None:
             result.skipped_count += 1
             result.skipped_reasons["binary/unreadable"] = result.skipped_reasons.get("binary/unreadable", 0) + 1
@@ -142,7 +147,7 @@ def walk(root_path: Path) -> WalkResult:
             size_kb = round(size_kb, 2),
             content = content,
             is_truncated = is_truncated,
-            is_entry_point = path.name in ENTRY_POINT_NAMES,
+            is_entry_point = is_entry_point,
         )     
         result.files.append(entry)
 
@@ -151,7 +156,7 @@ def walk(root_path: Path) -> WalkResult:
     return result
 
 # HELPERS
-def _read_file(path: Path) -> tuple[str | None, bool]:
+def _read_file(path: Path, max_chars: int) -> tuple[str | None, bool]:
 
     # reads a file's content safely, returns (content, is_truncated)
     try:
@@ -159,10 +164,10 @@ def _read_file(path: Path) -> tuple[str | None, bool]:
     except (UnicodeDecodeError, PermissionError):
         return None, False
     
-    if len(raw) > MAX_CONTENT_CHARS:
-        truncated = raw[:MAX_CONTENT_CHARS]
+    if len(raw) > max_chars:
+        truncated = raw[:max_chars]
         last_newline = truncated.rfind("\n")
-        if last_newline > MAX_CONTENT_CHARS * 0.8:
+        if last_newline > max_chars * 0.8:
             truncated = truncated[:last_newline]
         return truncated + "\n... [truncated] ...", True
     

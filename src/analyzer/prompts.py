@@ -78,27 +78,28 @@ Critical output rules — follow exactly:
 
 _MINIMAL_INSTRUCTIONS = """\
 Focus only on the essentials:
-- purpose: one sentence maximum
-- setup_steps: the minimum commands to get it running (3-5 steps)
+- purpose: 2-3 sentences
+- setup_steps: the minimum commands to get it running
 - usage_examples: one primary example only
-- Skip api_endpoints and env_variables unless critical to basic usage\
+- Skip api_endpoints and env_variables unless critical to basic usage
+- Add a fallback "Getting Started" combined section that merges prerequisites + installation \
 """
  
 _STANDARD_INSTRUCTIONS = """\
 Cover all major sections with moderate detail:
-- purpose: one clear sentence
+- purpose: precise and compelling — explains the value proposition clearly. Be specific, mention the domain and the problem it solves
 - how_it_works: 2-3 sentences on the architecture
-- setup_steps: complete sequence from clone to running (4-8 steps)
+- setup_steps: complete sequence from clone to running 
 - usage_examples: 2 realistic examples
 - Include env_variables if any are visible
 - Include api_endpoints if it's an API project\
 """
  
 _PROFESSIONAL_INSTRUCTIONS = """\
-Write polished, production-quality documentation:
-- purpose: precise and compelling — explains the value proposition clearly
-- how_it_works: thorough explanation of the architecture and design decisions (3-4 sentences)
-- tech_stack: comprehensive list including dev tooling and infrastructure
+Write polished, production-quality documentation in a professional and academic tone:
+- purpose: precise and compelling — explains the value proposition clearly. Be specific, mention the domain and the problem it solves.
+- how_it_works: thorough explanation of the architecture and design decisions- data flow, key components, design patterns (7-8 sentences)
+- tech_stack: comprehensive list including dev tooling and infrastructure. Must explain the role of each dependency in the project
 - setup_steps: complete, copy-paste-ready commands with no gaps (every step explicit)
 - usage_examples: 2-3 realistic examples showing the main workflows
 - env_variables: every env var with a clear description and where to obtain the value
@@ -107,16 +108,17 @@ Write polished, production-quality documentation:
 """
  
 _DETAILED_INSTRUCTIONS = """\
-Generate maximum-detail documentation covering everything visible in the codebase:
-- purpose: thorough explanation of what the project does, who it's for, and why it exists
-- how_it_works: deep architectural explanation — data flow, key components, design patterns (4-5 sentences)
-- tech_stack: every dependency with version and its role in the project
+Generate maximum-detail documentation covering everything visible in the codebase. Every field must be present even if the list is empty:
+- purpose: thorough explanation of what the project does, who it's for, and why it exists. Be specific, mention the domain and the problem it solves.
+- how_it_works: deep architectural explanation — data flow, key components, design patterns (atleast one paragraph with 8-10 sentences)
+- tech_stack: every dependency with version. write exact package names, not just categories. Must explain the role of each dependency in the project.
 - prerequisites: every requirement including optional ones
 - setup_steps: every single command in exact order — nothing omitted, nothing assumed
-- usage_examples: 3+ examples covering different features and workflows
+- usage_examples: 3+ examples covering different features and workflows. add commands, if any or explain the usage of the project properly in atleast 2-3 lines.
 - env_variables: exhaustive list with descriptions, example values, and whether required or optional
-- api_endpoints: all endpoints with method, path, parameters, and response description
-- scripts: every script/command available with what it does\
+- api_endpoints: all endpoints with method, path, parameters, and response description. look for @app.get, @router.post, app.use() patterns.
+- scripts: every script/command available with what it does
+Keep to every instruction in the template and give proper details for each section as mentioned.\
 """
  
 _TEMPLATE_INSTRUCTIONS = {

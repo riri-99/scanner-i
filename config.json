@@ -2,7 +2,8 @@
   "scanner": {
     "max_file_size_kb": 100,
     "max_files": 150,
-    "max_file_content_chars": 3000
+    "max_file_content_chars": 3000,
+    "max_entry_point_chars": 6000
   },
   "ignore": {
     "directories": [
