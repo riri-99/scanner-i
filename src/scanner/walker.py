@@ -12,10 +12,9 @@ from .filter import FileFilter
 
 # Load Config file
 
-_CONFIG_PATH = Path(__file__).parent.parent.parent / "config.json"
+from ..utils.config import get as _get_config
+_CFG = _get_config("scanner")
 
-with open(_CONFIG_PATH) as f:
-    _CFG = json.load(f)["scanner"]
 
 MAX_FILE_SIZE_KB: int = _CFG["max_file_size_kb"]
 MAX_FILES: int = _CFG["max_files"]

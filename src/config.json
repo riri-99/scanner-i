@@ -1,0 +1,52 @@
+{
+  "scanner": {
+    "max_file_size_kb": 100,
+    "max_files": 150,
+    "max_file_content_chars": 4000,
+    "max_entry_point_chars": 6000
+  },
+  "ignore": {
+    "directories": [
+      ".git", ".svn", ".hg",
+      "node_modules", "bower_components",
+      "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+      ".venv", "venv", "env", ".env",
+      "dist", "build", "out", ".next", ".nuxt", ".output",
+      "target", "bin", "obj",
+      "coverage", ".nyc_output", "htmlcov",
+      ".idea", ".vscode", ".vs",
+      "vendor", "third_party",
+      "eggs", ".eggs", "*.egg-info"
+    ],
+    "extensions": [
+      ".pyc", ".pyo", ".pyd",
+      ".class", ".jar",
+      ".o", ".so", ".dylib", ".dll", ".exe",
+      ".min.js", ".min.css",
+      ".map",
+      ".lock",
+      ".log",
+      ".DS_Store",
+      ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+      ".zip", ".tar", ".gz", ".rar", ".7z",
+      ".mp4", ".mp3", ".avi", ".mov",
+      ".ttf", ".woff", ".woff2", ".eot"
+    ],
+    "filenames": [
+      ".DS_Store", "Thumbs.db",
+      "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+      "poetry.lock", "Pipfile.lock", "Cargo.lock",
+      ".env", ".env.local", ".env.production"
+    ]
+  },
+
+  "model": {
+      "ollama_host": "http://localhost:11434",
+      "ollama_model": "phi3:mini",
+      "groq_model": "llama-3.3-70b-versatile",
+      "temperature": 0.2,
+      "timeout_secs": 120,
+      "preferred": "groq"
+    }
+}

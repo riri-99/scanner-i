@@ -1,23 +1,48 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires      = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "readmegen"
-version = "0.1.0"
+name        = "readmegen"
+version     = "0.1.0"
 description = "AI-powered README generator. Point it at any repo."
+readme      = "README.md"
+license     = { text = "MIT" }
 requires-python = ">=3.11"
-dependencies = [
-    "typer>=0.12",
-    "rich>=13",
-    "pathspec>=0.12",
-    "pydantic>=2",
-    "jinja2>=3",
+keywords    = ["readme", "documentation", "ai", "generator", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Utilities",
 ]
+
+dependencies = [
+    "typer>=0.12,<1.0",
+    "rich>=13,<14",
+    "pathspec>=0.12,<1.0",
+    "pydantic>=2,<3",
+    "jinja2>=3,<4",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/readmegen"
+Issues   = "https://github.com/yourusername/readmegen/issues"
 
 [project.scripts]
 readmegen = "src.cli.index:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where   = ["."]
 include = ["src*"]
+
+[tool.setuptools.package-data]
+"*"   = ["templates/*.md"]
+"src" = ["config.json"]

@@ -7,15 +7,12 @@ decides which files to keep and which are supposed o be skipped.
 '''
 
 from pathlib import Path
-import json
 import pathspec
 
 # loading the config.json file which contains the hard ignore list
 
-_CONFIG_PATH = Path(__file__).parent.parent.parent / "config.json"
-
-with open(_CONFIG_PATH) as f:
-    _CFG = json.load(f)["ignore"]
+from ..utils.config import get as _get_config
+_CFG = _get_config("ignore")
 
 IGNORED_DIRS: set[str] = set(_CFG["directories"])
 IGNORED_EXTENSIONS: set[str] = set(_CFG["extensions"])
@@ -37,13 +34,11 @@ class FileFilter:
 
     def should_ignore(self, path: Path) -> tuple[bool, str]:
 
-        import fnmatch
 
         # 1. Skips parent directory if its in the hard ignore list (handles globs like *.egg-info)
         for parent in path.parts:
-            for pattern in IGNORED_DIRS:
-                if fnmatch.fnmatch(parent, pattern):
-                    return True, f"ignored directory: {parent}"
+            if parent in IGNORED_DIRS:
+                return True, f"ignored directory: {parent}"
         
         # 2. Skip by filename
         if path.name in IGNORED_FILENAMES:

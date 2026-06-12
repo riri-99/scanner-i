@@ -18,6 +18,8 @@ from rich import box
  
 from ..orchestrator import run_scan, run_generate
 
+__version__ = "0.1.0"
+
 # ── App setup ─────────────────────────────────────────────────────────────────
 
 cli = typer.Typer(
@@ -26,6 +28,23 @@ cli = typer.Typer(
     add_completion=False,
 )
 console = Console()
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"readmegen [bold cyan]{__version__}[/bold cyan]")
+        raise typer.exit()
+    
+@cli.callback()
+def _main(
+    version: bool = typer.Option(
+        False, "--version", "--V",
+        help = "Show version and exit",
+        callback = _version_callback,
+        is_eager = True,
+    ),
+) -> None:
+    """AI-powered README generator. Point it at any repo."""
+    pass
 
 
 TEMPLATES = {
@@ -50,7 +69,7 @@ TEMPLATES = {
     "4": {
         "key":         "detailed",
         "label":       "Detailed",
-        "description": "Maximum depth — table of contents, every section, exhaustive",
+        "description": "Maximum depth — every section, exhaustive",
         "color":       "magenta",
     },
 }
@@ -202,7 +221,6 @@ def generate(
         )
  
     # ── Summary panel ─────────────────────────────────────────────────────────
-    if not dry_run:
         console.print()
         _print_summary(snapshot, analysis, write_result, chosen_template)
  

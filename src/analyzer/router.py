@@ -122,12 +122,12 @@ def _try_groq() -> GroqClient | None:
     if not api_key:
         return None
  
-    return GroqClient(
+    return GroqClient( 
         model=GROQ_MODEL,
         temperature=TEMPERATURE,
     )
  
- 
+
 def _load_dotenv() -> None:
     env_path = Path.cwd() / ".env"
     if not env_path.exists():
@@ -146,6 +146,15 @@ def _load_dotenv() -> None:
 
 # Exit helpers
 
+# for first run experience
+
+def _try_open_browser(url: str) -> None:
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+    
+
 def _exit_model_not_pulled() -> None:
     msg = (
         f"[yellow]Ollama is running but [bold]{OLLAMA_MODEL}[/bold] is not pulled yet.[/yellow]\n\n"
@@ -161,18 +170,20 @@ def _exit_model_not_pulled() -> None:
  
 def _exit_no_backend(ollama_running: bool, ollama_model_missing: bool) -> None:
     msg = (
-        "[red]No model backend is available.[/red]\n\n"
+       "[red]No model backend is available.[/red]\n\n"
         "[bold]Option 1 — Run locally with Ollama (recommended, free):[/bold]\n\n"
         "  1. Install Ollama:  [cyan]https://ollama.com[/cyan]\n"
         f"  2. Pull the model:  [bold cyan]ollama pull {OLLAMA_MODEL}[/bold cyan]\n"
         "  3. Ollama starts automatically — then re-run readmegen.\n\n"
-        "[bold]Option 2 — Use Groq (free cloud fallback):[/bold]\n\n"
+        "[bold]Option 2 — Use Groq (free cloud fallback, no install needed):[/bold]\n\n"
         "  1. Get a free API key at [cyan]https://console.groq.com[/cyan]\n"
-        "  2. Create a [dim].env[/dim] file in your project:\n\n"
+        "  2. Add it to a [dim].env[/dim] file in your project:\n\n"
         "       [bold cyan]GROQ_API_KEY=your_key_here[/bold cyan]\n\n"
-        "  3. Re-run readmegen."
+        "  3. Re-run readmegen.\n\n"
+        "[dim]Opening https://console.groq.com in your browser...[/dim]"
     )
     console.print(Panel(msg, title="[bold red]No model backend found[/bold red]", border_style="red"))
+    _try_open_browser("https://console.groq.com") 
     sys.exit(1)
 
 # Status helper
