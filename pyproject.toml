@@ -3,18 +3,18 @@ requires      = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name        = "readmegen"
+name        = "readmegen-rs"
 version     = "0.1.0"
 description = "AI-powered README generator. Point it at any repo."
 readme      = "README.md"
-license     = { text = "MIT" }
+
+license     = "MIT"
 requires-python = ">=3.11"
 keywords    = ["readme", "documentation", "ai", "generator", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -44,5 +44,4 @@ where   = ["."]
 include = ["src*"]
 
 [tool.setuptools.package-data]
-"*"   = ["templates/*.md"]
-"src" = ["config.json"]
+"src" = ["config.json", "templates/*.md"]

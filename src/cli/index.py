@@ -32,7 +32,7 @@ console = Console()
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"readmegen [bold cyan]{__version__}[/bold cyan]")
-        raise typer.exit()
+        raise typer.Exit()
     
 @cli.callback()
 def _main(

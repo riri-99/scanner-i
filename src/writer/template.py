@@ -13,8 +13,8 @@ from . import sections as sec
 
 # Buil in template directory
 
-_TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates"
-BUILTIN_TEMPLATES = ("minimal", "standard", "professional", "detailed")
+_TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+BUILTIN_TEMPLATES = ("default", "minimal", "standard", "professional", "detailed")
 
 
 # Public API
