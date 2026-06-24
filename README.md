@@ -268,9 +268,3 @@ cd readmegen
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-
----
-
-## License
-
-[MIT](LICENSE)
