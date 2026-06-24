@@ -1,5 +1,6 @@
 # readmegen
 
+![Language](https://img.shields.io/badge/Language-Python-3776ab)
 
 
 **AI-powered README generator. Point it at any repo.**
