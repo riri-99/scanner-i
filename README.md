@@ -1,9 +1,6 @@
 # readmegen
 
-[![PyPI version](https://img.shields.io/pypi/v/readmegen?color=blue)](https://pypi.org/project/readmegen-rs/)
-[![Python versions](https://img.shields.io/pypi/pyversions/readmegen)](https://pypi.org/project/readmegen-rs/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/readmegen)](https://pypi.org/project/readmegen/)
+
 
 **AI-powered README generator. Point it at any repo.**
 
