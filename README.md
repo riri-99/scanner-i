@@ -1,91 +1,279 @@
-# Scanner I
+# readmegen
 
-![Language](https://img.shields.io/badge/Language-Python-3776ab)
+[![PyPI version](https://img.shields.io/pypi/v/readmegen?color=blue)](https://pypi.org/project/readmegen-rs/)
+[![Python versions](https://img.shields.io/pypi/pyversions/readmegen)](https://pypi.org/project/readmegen-rs/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/readmegen)](https://pypi.org/project/readmegen/)
 
+**AI-powered README generator. Point it at any repo.**
 
-## About
+`readmegen` scans a codebase, understands what it does, and writes a complete, professional `README.md` — in seconds, from your terminal, for free.
 
-This project is an AI-powered README generator, designed for senior software engineers to analyze a repository context and extract structured information for a README file, targeting public GitHub repositories.
+```bash
+pip install readmegen
+readmegen generate ./your-project
+```
+
+<!--
+  Terminal demo placeholder — record with asciinema or terminalizer and embed here:
+  asciinema rec demo.cast
+  asciinema upload demo.cast
+  Then embed:
+  [![asciicast](https://asciinema.org/a/XXXXX.svg)](https://asciinema.org/a/XXXXX)
+-->
+
+![readmegen demo](https://raw.githubusercontent.com/yourusername/readmegen/main/docs/demo.gif)
+
+---
+
+## Why This Exists
+
+Every project needs a README. Almost nobody enjoys writing one.
+
+The result: thousands of repositories with a README that's either missing, three lines long, or six months out of date the moment the codebase moves on. Documentation debt is one of the most common and most avoidable forms of technical debt — and it's almost always skipped not because it's hard, but because it's tedious.
+
+`readmegen` removes the tedium. It reads your actual code — your entry points, your dependencies, your project structure — and writes documentation grounded in what's really there, not a generic template with blanks to fill in.
+
+It runs entirely on your terminal, costs nothing to use, and never sends your code anywhere if you choose to run it locally with Ollama.
+
+---
 
 ## How It Works
 
-The project utilizes a decision layer that picks the right model backend, either Ollama or Groq, based on the preferred model specified in the config.json file. It then uses the chosen model to generate a README file by analyzing the repository context and extracting relevant information. The project consists of several components, including a scanner, analyzer, and router, which work together to generate the README file. The scanner gathers information about the repository, the analyzer processes this information and generates a context string, and the router decides which model to use. The project also includes a parser that takes the model's output and converts it into a validated AnalysisObject, which is then used to generate the README file.
+`readmegen` runs a three-phase pipeline every time you generate a README:
 
-## Teck Stack
+```
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│   Scanner    │ ───▶ │   Analyzer   │ ───▶ │    Writer    │
+│  (Phase 1)   │      │  (Phase 2)   │      │  (Phase 3)   │
+└─────────────┘      └─────────────┘      └─────────────┘
+ reads your repo       sends context to     renders a clean
+ detects languages,    an LLM, gets back     README.md from
+ frameworks, deps      structured analysis   the structured data
+```
 
-- Python 3.11
-- Typer 0.12
-- Rich 13
-- Pathspec 0.12
-- Pydantic 2
-- Jinja2 3
+1. **Scan** — walks your project, respects `.gitignore`, detects the primary language, identifies frameworks from `package.json` / `requirements.txt` / `Cargo.toml` / `go.mod` and others, and extracts your dependency list.
+2. **Analyze** — builds a token-budgeted context from the most relevant files (entry points first), sends it to an LLM backend, and parses the response into structured fields: purpose, setup steps, tech stack, environment variables, API endpoints, and more.
+3. **Write** — renders that structured data into clean Markdown using one of four built-in templates, and writes it to `README.md` — backing up any existing one first.
 
-## Prerequisites
+Nothing about your code is stored or sent anywhere beyond the single model call required to analyze it. If you run the local Ollama backend, nothing leaves your machine at all.
 
-- Python 3.11+
-- pip
-- Git
+---
 
 ## Installation
 
-1. Run:
+```bash
+pip install readmegen
+```
 
-  ```bash
-  git clone https://github.com/owner/repo
-  ```
+Requires **Python 3.11+**.
 
-2. Run:
+---
 
-  ```bash
-  cd repo
-  ```
+## Backend Setup
 
-3. Run:
+`readmegen` needs one model backend to generate the analysis. Choose whichever fits you — both are free.
 
-  ```bash
-  pip install -r requirements.txt
-  ```
+### Option A — Groq (cloud, zero install, recommended for quick start)
 
-4. Run:
+1. Create a free account and API key at **[console.groq.com](https://console.groq.com)**
+2. Add it to a `.env` file in your project directory:
 
-  ```bash
-  cp .env.example .env
-  ```
+   ```bash
+   echo "GROQ_API_KEY=your_key_here" > .env
+   ```
 
-5. Run:
+3. Done. Groq's free tier allows 14,400 requests/day — far more than typical use requires.
 
-  ```bash
-  pip install .
-  ```
+### Option B — Ollama (local, fully private, no API key)
+
+1. Install Ollama: **[ollama.com](https://ollama.com)**
+2. Pull the model:
+
+   ```bash
+   ollama pull codellama:7b
+   ```
+
+3. Ollama runs a local server automatically. `readmegen` detects it and uses it — no further setup needed.
+
+Check which backend is active at any time:
+
+```bash
+readmegen status
+```
+
+```
+╭─────────────────── Backend Status ───────────────────╮
+│  Ollama:    ✓ Running   model codellama:7b ready      │
+│  Groq:      ✗ No GROQ_API_KEY                         │
+│  Will use:  Ollama (codellama:7b)                     │
+╰────────────────────────────────────────────────────────╯
+```
+
+---
 
 ## Usage
 
-Generate a README file for the current repository
+### Generate a README
 
 ```bash
-readmegen
+readmegen generate ./your-project
 ```
 
-Generate a README file for a specific repository
+You'll be prompted to choose a template style:
+
+```
+  1. Minimal       Title, About, Installation, Usage, License
+  2. Standard      All sections, moderate detail
+  3. Professional  Polished, production-quality, full detail
+  4. Detailed      Maximum depth, table of contents, exhaustive
+```
+
+Or skip the prompt entirely by specifying one directly:
 
 ```bash
-readmegen --repo https://github.com/owner/repo
+readmegen generate ./your-project --template professional
 ```
 
-Generate a README file with a specific model
+### Preview without writing
 
 ```bash
-readmegen --model groq
+readmegen generate ./your-project --dry-run
 ```
 
-## Scripts
+Renders the full README in your terminal — nothing touches disk.
+
+### Custom output path
+
+```bash
+readmegen generate ./your-project --output ./docs/README.md
+```
+
+### Scan only (Phase 1, no model call)
+
+```bash
+readmegen scan ./your-project
+```
+
+Useful for quickly inspecting what `readmegen` detects — languages, frameworks, dependencies — without spending a model call.
+
+### Force a fresh run
+
+```bash
+readmegen generate ./your-project --no-cache
+```
+
+By default, `readmegen` caches the scan and analysis results in `.readmegen/`. Use `--no-cache` to bypass the cache and re-run the full pipeline.
+
+---
+
+## Example Output
+
+Running `readmegen generate` on a FastAPI + PostgreSQL project produces something like:
+
+```markdown
+# My Task API
+
+![Language](...) ![License](...)
+
+## About
+A REST API for managing tasks, built with FastAPI and PostgreSQL.
+
+## How It Works
+Requests are routed through FastAPI, validated with Pydantic, and
+persisted via SQLAlchemy. Authentication uses JWT tokens.
+
+## Installation
+1. Run:
+   ```bash
+   git clone https://github.com/you/my-task-api
+   ```
+2. Run:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run:
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+## Environment Variables
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SECRET_KEY` | JWT signing secret |
+
+## API Reference
+- `GET /tasks` — list all tasks
+- `POST /tasks` — create a new task
+
+## License
+MIT
+```
+
+That's a README most developers would commit without editing.
+
+---
+
+## Supported Ecosystems
+
+`readmegen` detects dependencies and frameworks across:
+
+| Ecosystem | Files Parsed |
+|---|---|
+| Python | `requirements.txt`, `pyproject.toml`, `Pipfile` |
+| Node.js / TypeScript | `package.json` |
+| Rust | `Cargo.toml` |
+| Go | `go.mod` |
+| Ruby | `Gemfile` |
+| Java | `pom.xml` |
+
+Framework detection covers 50+ common libraries — FastAPI, Django, Flask, React, Next.js, Vue, Express, Rails, Spring Boot, and many more — automatically surfaced in the generated README's tech stack section.
+
+---
+
+## Command Reference
 
 | Command | Description |
 |---|---|
-| `readmegen` | Generate a README file for the current repository |
+| `readmegen generate <path>` | Full pipeline — scan, analyze, write README |
+| `readmegen scan <path>` | Phase 1 only — inspect detected languages/deps |
+| `readmegen status` | Check which model backend is active |
+| `readmegen --version` | Show installed version |
+
+### Flags
+
+| Flag | Applies to | Description |
+|---|---|---|
+| `--template`, `-t` | `generate` | `minimal`, `standard`, `professional`, `detailed`, or a path to a custom `.md` template |
+| `--output`, `-o` | `generate` | Custom output path (default: `<path>/README.md`) |
+| `--dry-run` | `generate` | Preview in terminal, write nothing |
+| `--no-cache` | `generate`, `scan` | Force a fresh scan/analysis, ignoring `.readmegen/` cache |
+| `--verbose`, `-v` | `scan` | Show every file collected, with skip reasons |
+
+---
+
+## Privacy
+
+If you use the **Ollama** backend, your code never leaves your machine. The entire analysis runs locally.
+
+If you use **Groq**, a trimmed, token-budgeted excerpt of your repository (entry points, config files, and key source files — not your full codebase) is sent to Groq's API for analysis. No data is stored by `readmegen` itself, and nothing is sent anywhere outside of that single API call per run.
+
+---
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. For larger changes, please open an issue first to discuss what you'd like to change.
 
+```bash
+git clone https://github.com/yourusername/readmegen
+cd readmegen
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+```
 
+---
+
+## License
+
+[MIT](LICENSE)
