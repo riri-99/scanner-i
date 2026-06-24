@@ -206,7 +206,7 @@ persisted via SQLAlchemy. Authentication uses JWT tokens.
 
 ## License
 MIT
-```
+
 
 That's a README most developers would commit without editing.
 
@@ -267,7 +267,7 @@ git clone https://github.com/yourusername/readmegen
 cd readmegen
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
-```
+
 
 ---
 
