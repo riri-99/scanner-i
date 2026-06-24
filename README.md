@@ -40,10 +40,10 @@ It runs entirely on your terminal, costs nothing to use, and never sends your co
 `readmegen` runs a three-phase pipeline every time you generate a README:
 
 ```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Scanner    │ ───▶ │   Analyzer   │ ───▶ │    Writer    │
-│  (Phase 1)   │      │  (Phase 2)   │      │  (Phase 3)   │
-└─────────────┘      └─────────────┘      └─────────────┘
+┌─────────────┐       ┌─────────────┐      ┌─────────────┐
+│   Scanner   │ ───▶ │   Analyzer   │ ──▶ │    Writer   │
+│  (Phase 1)  │       │  (Phase 2)  │      │  (Phase 3)  │
+└─────────────┘       └─────────────┘      └─────────────┘
  reads your repo       sends context to     renders a clean
  detects languages,    an LLM, gets back     README.md from
  frameworks, deps      structured analysis   the structured data
@@ -101,10 +101,10 @@ readmegen status
 
 ```
 ╭─────────────────── Backend Status ───────────────────╮
-│  Ollama:    ✓ Running   model codellama:7b ready      │
-│  Groq:      ✗ No GROQ_API_KEY                         │
+│  Ollama:    ✓ Running   model codellama:7b ready     │
+│  Groq:      ✗ No GROQ_API_KEY                        │
 │  Will use:  Ollama (codellama:7b)                     │
-╰────────────────────────────────────────────────────────╯
+╰───────────────────────────────────────────────────────╯
 ```
 
 ---
