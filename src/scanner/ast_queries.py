@@ -56,7 +56,7 @@ NODE_KINDS: dict[str, dict[str, list[str]]] = {
         "comments":  ["line_comment", "multiline_comment"],
     },
     "ruby": {
-        "imports":   ["call"],   # filtered further: only require/require_relative calls
+        "imports":   ["call"],   
         "functions": ["method"],
         "classes":   ["class", "module"],
         "comments":  ["comment"],
@@ -92,9 +92,9 @@ NODE_KINDS: dict[str, dict[str, list[str]]] = {
         "comments":  ["comment", "multiline_comment"],
     },
     "shell": {
-        "imports":   [],   # shell has no import concept worth extracting
+        "imports":   [],   
         "functions": ["function_definition"],
-        "classes":   [],   # shell has no class concept
+        "classes":   [], 
         "comments":  ["comment"],
     },
 }

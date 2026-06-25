@@ -47,11 +47,11 @@ def _load_javascript():
  
 def _load_typescript():
     import tree_sitter_typescript as m
-    return m.language_typescript()          # ← quirk: not .language()
+    return m.language_typescript()          # quirk: not .language()
  
 def _load_tsx():
     import tree_sitter_typescript as m
-    return m.language_tsx()                 # ← separate grammar for .tsx
+    return m.language_tsx()                 # separate grammar for .tsx
  
 def _load_go():
     import tree_sitter_go as m

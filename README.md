@@ -24,7 +24,7 @@ readmegen generate ./your-project
 
 ---
 
-## Why This Exists
+# Why This Exists
 
 Every project needs a README. Almost nobody enjoys writing one.
 
@@ -36,7 +36,7 @@ It runs entirely on your terminal, costs nothing to use, and never sends your co
 
 ---
 
-## How It Works
+# How It Works
 
 `readmegen` runs a three-phase pipeline every time you generate a README:
 
@@ -58,7 +58,7 @@ Nothing about your code is stored or sent anywhere beyond the single model call 
 
 ---
 
-## Installation
+# Installation
 
 ```bash
 pip install readmegen
@@ -68,7 +68,7 @@ Requires **Python 3.11+**.
 
 ---
 
-## Backend Setup
+# Backend Setup
 
 `readmegen` needs one model backend to generate the analysis. Choose whichever fits you — both are free.
 
@@ -110,7 +110,7 @@ readmegen status
 
 ---
 
-## Usage
+# Usage
 
 ### Generate a README
 
@@ -165,23 +165,24 @@ By default, `readmegen` caches the scan and analysis results in `.readmegen/`. U
 
 ---
 
-## Example Output
+# Example Output
 
 Running `readmegen generate` on a FastAPI + PostgreSQL project produces something like:
 
-```markdown
-# My Task API
+
+
+### My Task API
 
 ![Language](...) ![License](...)
 
-## About
+### About
 A REST API for managing tasks, built with FastAPI and PostgreSQL.
 
-## How It Works
+### How It Works
 Requests are routed through FastAPI, validated with Pydantic, and
 persisted via SQLAlchemy. Authentication uses JWT tokens.
 
-## Installation
+### Installation
 1. Run:
    ```bash
    git clone https://github.com/you/my-task-api
@@ -195,17 +196,17 @@ persisted via SQLAlchemy. Authentication uses JWT tokens.
    uvicorn main:app --reload
    ```
 
-## Environment Variables
+### Environment Variables
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `SECRET_KEY` | JWT signing secret |
 
-## API Reference
+### API Reference
 - `GET /tasks` — list all tasks
 - `POST /tasks` — create a new task
 
-## License
+### License
 MIT
 
 
@@ -213,7 +214,7 @@ That's a README most developers would commit without editing.
 
 ---
 
-## Supported Ecosystems
+# Supported Ecosystems
 
 `readmegen` detects dependencies and frameworks across:
 
@@ -230,7 +231,7 @@ Framework detection covers 50+ common libraries — FastAPI, Django, Flask, Reac
 
 ---
 
-## Command Reference
+# Command Reference
 
 | Command | Description |
 |---|---|
@@ -239,7 +240,7 @@ Framework detection covers 50+ common libraries — FastAPI, Django, Flask, Reac
 | `readmegen status` | Check which model backend is active |
 | `readmegen --version` | Show installed version |
 
-### Flags
+## Flags
 
 | Flag | Applies to | Description |
 |---|---|---|
@@ -251,7 +252,7 @@ Framework detection covers 50+ common libraries — FastAPI, Django, Flask, Reac
 
 ---
 
-## Privacy
+# Privacy
 
 If you use the **Ollama** backend, your code never leaves your machine. The entire analysis runs locally.
 
@@ -259,7 +260,7 @@ If you use **Groq**, a trimmed, token-budgeted excerpt of your repository (entry
 
 ---
 
-## Contributing
+# Contributing
 
 Pull requests are welcome. For larger changes, please open an issue first to discuss what you'd like to change.
 
