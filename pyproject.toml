@@ -30,21 +30,6 @@ dependencies = [
     "pathspec>=0.12,<1.0",
     "pydantic>=2,<3",
     "jinja2>=3,<4",
-    "tree-sitter>=0.23,<1.0",
-    "tree-sitter-python>=0.23,<1.0",
-    "tree-sitter-javascript>=0.23,<1.0",
-    "tree-sitter-typescript>=0.23,<1.0",
-    "tree-sitter-go>=0.23,<1.0",
-    "tree-sitter-rust>=0.23,<1.0",
-    "tree-sitter-java>=0.23,<1.0",
-    "tree-sitter-kotlin>=1.0,<2.0",
-    "tree-sitter-ruby>=0.23,<1.0",
-    "tree-sitter-php>=0.23,<1.0",
-    "tree-sitter-c-sharp>=0.23,<1.0",
-    "tree-sitter-cpp>=0.23,<1.0",
-    "tree-sitter-c>=0.23,<1.0",
-    "tree-sitter-swift>=0.7,<1.0",
-    "tree-sitter-bash>=0.23,<1.0",
 ]
 
 [project.urls]
