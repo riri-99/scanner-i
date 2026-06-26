@@ -53,7 +53,7 @@ NODE_KINDS: dict[str, dict[str, list[str]]] = {
         "imports":   ["import"],
         "functions": ["function_declaration"],
         "classes":   ["class_declaration"],
-        "comments":  ["line_comment", "multiline_comment"],
+        "comments":  ["line_comment", "block_comment"],
     },
     "ruby": {
         "imports":   ["call"],   
@@ -136,11 +136,12 @@ def build_query(readmegen_lang: str) -> Query | None:
 def _build_pattern(kinds: dict[str, list[str]]) -> str:
 
     lines = []
+    singular = {"imports": "import", "functions": "function", "classes": "class", "comments": "comment"}
     for category, node_types in kinds.items():
         if not node_types:
             continue
-        capture_name = category[:-1] if category.endswith("s") else category
-        alternation = " ".join(f"({int})" for nt in node_types)
+        capture_name = singular.get(category, category)
+        alternation = " ".join(f"({nt})" for nt in node_types)
         lines.append(f"[{alternation}] @{capture_name}")
     
     return "\n".join(lines)
@@ -162,3 +163,27 @@ def run_query(readmegen_lang: str, tree, code: bytes) -> dict[str, list]:
 
 def supported_languages() -> list[str]:
     return sorted(NODE_KINDS.keys())
+
+
+BODY_KINDS: dict[str, list[str]] = {
+    "python":     ["block"],
+    "javascript": ["statement_block", "class_body"],
+    "typescript": ["statement_block", "class_body"],
+    "tsx":        ["statement_block", "class_body"],
+    "go":         ["block"],
+    "rust":       ["block", "field_declaration_list", "declaration_list"],
+    "java":       ["block", "class_body"],
+    "kotlin":     ["function_body", "class_body"],
+    "ruby":       ["body_statement"],
+    "php":        ["compound_statement", "declaration_list"],
+    "c#":         ["block", "declaration_list"],
+    "c++":        ["compound_statement", "field_declaration_list"],
+    "c":          ["compound_statement", "field_declaration_list"],
+    "swift":      ["function_body", "class_body"],
+    "shell":      ["compound_statement"],
+}
+
+IMPORT_TEXT_FILTERS: dict[str, list[str]] = {
+    "ruby": ["require", "require_relative", "load", "autoload"],
+}
+
