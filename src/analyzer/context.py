@@ -224,8 +224,11 @@ def _add_files(
         block = _format_file_block(f, label)
 
         if len(block) > remaining:
-            block = block[:remaining].rstrip()
-            block += "\n# ... [context limit reached] ..."
+            cut = block[remaining]
+            last_newline = cut.rfind("\n")
+            if last_newline > remaining:
+                cut = cut[:last_newline]
+            block = cut.rstrip() + "\n# ... [context limit reached] ..."
             sections.append(block)
             remaining = 0
             break
@@ -277,7 +280,7 @@ def _format_file_block(f: FileSnapshot, label: str | None) -> str:
 
     if len(content) > SKELETON_THRESHOLD_CHARS:
         result = extract_skeleton(content, f.language)
-        if result.wasextracted and result.skeleton.strip():
+        if result.was_extracted and result.skeleton.strip():
             content = result.skeleton
             used_skeleton = True
 
