@@ -7,6 +7,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..scanner.assembler import RepoSnapshot, FileSnapshot
+from ..scanner.ast_extractor import extract_skeleton
+from ..utils.config import get as _get_config
 
 # Token Budget
 # Rough rule: 1 token ≈ 4 characters for English/code.
@@ -20,6 +22,16 @@ CHAR_BUDGET: int = 24_000
 # Metadata is short so we hardcode an upper bound.
 
 METADATA_RESERVE: int = 1_200
+
+# Files larger than this get AST skeleton extraction instead of raw
+# content — signatures + docstrings kept, function/method bodies
+# stripped. Files at or under this size stay as plain raw content;
+# AST overhead isn't worth it for something already this cheap.
+# Below this threshold a file fits comfortably without any special
+# handling, so we skip the parse step entirely for the common case.
+_CONTEXT_CFG = _get_config("context")
+SKELETON_THRESHOLD_CHARS: int = _CONTEXT_CFG["skeleton_threshold_chars"]
+
 
 # Config file signatures
 
@@ -39,12 +51,12 @@ CONFIG_FILENAMES: set[str] = {
 
 # README file signatures
 README_FILENAMES: set[str] = {
-    "readme.md", "readme.txt", "readme",
-    "readme.rst", "readme.adoc"
-}
+ "readme.md", "readme.txt", "readme",
+ "readme.rst", "readme.adoc"
+ }
 
 # Test file signals
-TEST_SIGNALS: tuple[str, ...] = ("test", "spec", "_test.", "tests/", "__tests__/")
+TEST_SIGNALS: tuple[str, ...] = ("test", "spec", "_test.", "tests/", "__tests__/", ".test.")
 
 # public API
 
@@ -223,18 +235,77 @@ def _add_files(
  
     return remaining
  
+
+"""
+def _format_file_block: ...
+Format a single file as a labelled block for the prompt context.
  
+    Files at or under SKELETON_THRESHOLD_CHARS use raw content as-is —
+    no AST overhead needed for something already this small.
+ 
+    Files larger than the threshold attempt AST skeleton extraction
+    first: signatures, docstrings, and imports kept, function/method
+    bodies replaced with "...". This gives the model real structural
+    understanding of large files instead of an arbitrary mid-function
+    cutoff. If extraction isn't possible (unsupported language, parse
+    failure, no structural nodes found), falls back to the file's raw
+    content — which then goes through the normal budget-based
+    truncation in _add_files() exactly as before this feature existed.
+ 
+    Example output (small file, raw):
+        === FILE: src/config.py (entry point) ===
+        DEBUG = True
+        ...
+ 
+    Example output (large file, skeleton):
+        === FILE: src/main.py (entry point) [AST skeleton] ===
+        from fastapi import FastAPI
+ 
+        class UserService:
+            Handles user database operations.
+ 
+        async def get_user(self, id: str) -> dict:
+            Fetch a user by ID.
+            ..
+"""
+
 def _format_file_block(f: FileSnapshot, label: str | None) -> str:
+
     tag = f" ({label})" if label else ""
-    header = f"=== FILE: {f.path}{tag} ==="
-    truncation_note = "\n# ... [file truncated] ..." if f.is_truncated else ""
- 
-    return f"{header}\n{f.content}{truncation_note}"
+    content = f.content
+    used_skeleton = False
+
+    if len(content) > SKELETON_THRESHOLD_CHARS:
+        result = extract_skeleton(content, f.language)
+        if result.wasextracted and result.skeleton.strip():
+            content = result.skeleton
+            used_skeleton = True
+
+    
+    skeleton_tag = " [AST skeleton]" if used_skeleton else ""
+    header = f"=== FILE: {f.path}{tag}{skeleton_tag} ==="
+
+    truncation_note = (
+        "\n# ... [file truncated] ..."
+        if (f.is_truncated and not used_skeleton)
+        else ""
+    )
+
+    return f"{header}\n{content}{truncation_note}"
+
 
 # Diagnostic helper
 def stats(snapshot: RepoSnapshot, char_budget: int = CHAR_BUDGET) -> dict:
+
     readme, entry, config, source, tests = _categorise(snapshot.files)
     metadata_len = len(_build_metadata(snapshot))
+
+    def estimated_chars(f: FileSnapshot) -> int:
+        if len(f.content) <= SKELETON_THRESHOLD_CHARS:
+            return len(f.content) + len(f.path) + 20
+        result = extract_skeleton(f.content, f.language)
+        size = len(result.skeleton) if result.was_extracted else len(f.content)
+        return size + len(f.path) + 20
  
     def total_chars(files: list[FileSnapshot]) -> int:
         return sum(len(f.content) + len(f.path) + 20 for f in files)
