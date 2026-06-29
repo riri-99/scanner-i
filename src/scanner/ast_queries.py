@@ -7,13 +7,11 @@ For each language, defines which AST node types represent:
   - classes     (classes, structs, interfaces — "type containers")
   - comments    (used to recover docstrings sitting above a definition)
  
-Node type names were discovered empirically by parsing real code samples per language and inspecting the actual tree (see project
-history) — not guessed from documentation, since grammars frequently use different names for conceptually identical constructs.
  
-Design choice: 
-queries capture whole nodes by type, not specific fields within them (e.g. "give me every function_definition node",
+Queries capture whole nodes by type, not specific fields within them (e.g. "give me every function_definition node",
 not "give me the name field of every function_definition"). Field names vary far more across grammars than node type names do, so
-this keeps queries robust. Name/signature extraction from the captured node happens in Python afterward (next step).
+this keeps queries robust. Name/signature extraction from the captured node happens in Python afterward.
+
 """
 
 
