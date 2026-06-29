@@ -1,3 +1,22 @@
+"""
+AST-extraction plan — per-language query map.
+ 
+For each language, defines which AST node types represent:
+  - imports     (import/require/use statements)
+  - functions   (standalone functions AND methods)
+  - classes     (classes, structs, interfaces — "type containers")
+  - comments    (used to recover docstrings sitting above a definition)
+ 
+Node type names were discovered empirically by parsing real code samples per language and inspecting the actual tree (see project
+history) — not guessed from documentation, since grammars frequently use different names for conceptually identical constructs.
+ 
+Design choice: 
+queries capture whole nodes by type, not specific fields within them (e.g. "give me every function_definition node",
+not "give me the name field of every function_definition"). Field names vary far more across grammars than node type names do, so
+this keeps queries robust. Name/signature extraction from the captured node happens in Python afterward (next step).
+"""
+
+
 from __future__ import annotations
 
 from tree_sitter import Query, QueryCursor
@@ -176,6 +195,16 @@ def run_query(readmegen_lang: str, tree, code: bytes) -> dict[str, list]:
 def supported_languages() -> list[str]:
     return sorted(NODE_KINDS.keys())
 
+# Body node type map 
+# Used by the skeleton extractor (ast_extractor.py) to find where a
+# function/method/class body starts, so it can keep the signature and
+# discard everything from the body's start_byte onward.
+#
+# Verified empirically per language — body node names vary a lot more
+# than the "container" node names above (e.g. Python/Go/Rust/Java/C# all
+# happen to share "block", but JS uses "statement_block", Kotlin/Swift
+# use "function_body", Ruby uses "body_statement", and C-family languages
+# use "compound_statement").
 
 BODY_KINDS: dict[str, list[str]] = {
     "python":     ["block"],
@@ -194,6 +223,23 @@ BODY_KINDS: dict[str, list[str]] = {
     "swift":      ["function_body", "class_body"],
     "shell":      ["compound_statement"],
 }
+
+# Structural capture filters 
+# Some grammars have no dedicated node type for a construct we care about —
+# the node type alone is ambiguous and needs inspecting actual children to
+# decide if a capture is real. Two confirmed cases so far:
+#
+#   Ruby:    require/require_relative is a generic "call" node — identical
+#            in type to every other method invocation in the file.
+#   JS/TS:   CommonJS imports (`var x = require('y')`) are plain
+#            "variable_declaration" nodes; function-expression assignments
+#            (`app.use = function() {...}`, `exports.foo = function(){}`)
+#            are "assignment_expression"/"variable_declarator" nodes whose
+#            right-hand side happens to be a function — structurally
+#            identical to a normal variable assignment otherwise.
+#
+# Each filter is a function(node, code_bytes) -> bool, run after the query
+# captures nodes by type, to decide which captures are real.
 
 def _is_require_call(node, code: bytes) -> bool:
     
