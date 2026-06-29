@@ -26,16 +26,19 @@ logger = logging.getLogger(__name__)
 # Analysis Object
 
 class AnalysisObject(BaseModel):
-    purpose: str = ""
-    how_it_works: str = ""
-    tech_stack: list[str] = Field(default_factory=list)
-    prerequisites: list[str] = Field(default_factory=list)
-    setup_steps: list[str] = Field(default_factory=list)
-    usage_examples: list[dict] = Field(default_factory=list)
-    env_variables: list[dict] = Field(default_factory=list)
-    api_endpoints: list[str] = Field(default_factory=list)
-    scripts: dict[str, str] = Field(default_factory=dict)
-    license: str | None = None
+    tagline:           str            = ""   # one punchy sentence, bold under the title
+    purpose:           str            = ""   # functional one-liner: what it does
+    problem_statement: str            = ""   # persuasive: why this exists, what pain it removes
+    how_it_works:      str            = ""
+    tech_stack:        list[str]      = Field(default_factory=list)
+    prerequisites:     list[str]      = Field(default_factory=list)
+    setup_steps:       list[str]      = Field(default_factory=list)
+    usage_examples:    list[dict]     = Field(default_factory=list)  # [{"title","command","description"}]
+    command_reference: list[dict]     = Field(default_factory=list)  # [{"command","description"}] — CLI tools only
+    env_variables:     list[dict]     = Field(default_factory=list)
+    api_endpoints:     list[str]      = Field(default_factory=list)
+    scripts:           dict[str, str] = Field(default_factory=dict)
+    license:            str | None    = None
 
     # Meta fields - set by the parser
     parse_success: bool = True # False if fallback was used
@@ -44,6 +47,7 @@ class AnalysisObject(BaseModel):
     # Validators
     
     @field_validator("tech_stack", "prerequisites", "setup_steps", "api_endpoints", mode="before")
+
     @classmethod
     def ensure_str_list(cls, v: Any) -> list[str]:
         if v is None:
@@ -53,27 +57,10 @@ class AnalysisObject(BaseModel):
         if isinstance(v, list):
             return[str(item).strip() for item in v if item and str(item).strip()]
         return[]
-
-    @field_validator("usage_examples", mode="before")
-    @classmethod
-    def ensure_usage_list(cls, v: Any) -> list[dict]:
-        if not v or not isinstance(v, list):
-            return []
-        result = []
-        for item in v:
-            if isinstance(item, dict) and item:
-                result.append({
-                    "example": str(item.get("example", item.get("command", item.get("code", "")))),
-                    "explanation": str(item.get("explanation", item.get("desc", ""))),
-                })
-            elif isinstance(item, str) and item.strip():
-                result.append({
-                    "example": item.strip(),
-                    "explanation": "",
-                })
-        return result
     
+
     @field_validator("env_variables", mode="before")
+
     @classmethod
     def ensure_dict_list(cls, v: Any) -> list[dict]:
         if not v or not isinstance(v, list):
@@ -86,22 +73,71 @@ class AnalysisObject(BaseModel):
                     "description": str(item.get("description", item.get("desc", ""))),
                 })
         return result
-    
+
+
+    @field_validator("usage_examples", mode="before")
+
+    @classmethod
+    def ensure_usage_examples(cls, v: Any) -> list[dict]:
+        if not v:
+            return {}
+        
+        if isinstance(v, str):
+            v = [v]
+        result = []
+        for item in v:
+            if isinstance(item, dict):
+                command = str(item.get("command", item.get("code", ""))).strip()
+                if not command:
+                    continue
+                result.append({
+                    "title": str(item.get("title", "")).strip(),
+                    "command": command,
+                    "description": str(item.get("description", "")).strip(),
+                })
+            elif isinstance(item, str) and item.strip():
+                result.append({"title": "", "command": item.strip(), "description": ""})
+        return result
+
+
+    @field_validator("command_reference", mode="before")
+
+    @classmethod
+    def ensure_command_references(cls, v: Any) -> list[dict]:
+        if not v or not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, dict):
+                command = str(item.get("command", "")).strip()
+                if command:
+                    result.append({
+                        "command": command,
+                        "description": str(item.get("description", "")).strip()
+                    })
+        return result
+        
+
     @field_validator("scripts", mode="before")
+
     @classmethod
     def ensure_str_dict(cls, v: Any) -> dict[str, str]:
         if not v or not isinstance(v, dict):
             return{}
         return {str(k): str(val) for k, val in v.items() if k and val}
     
-    @field_validator("purpose", "how_it_works", mode="before")
+
+    @field_validator("tagline", "purpose", "problem_statement", "how_it_works", mode="before")
+
     @classmethod
     def ensure_str(cls, v: Any) -> str:
         if v is None:
             return ""
         return str(v).strip()
     
+
     @field_validator("license", mode="before")
+
     @classmethod
     def ensure_license(cls, v: Any) -> str | None:
         if not v or str(v).strip().lower() in ("null", "none", "unknown", ""):
@@ -114,7 +150,7 @@ class AnalysisObject(BaseModel):
 def parse(raw: str) -> AnalysisObject:
     # Parses a raw model response string into a validated AnalysisObject
     if not raw or not raw.strip():
-        logger.warning("Parser eceived empty response - using fallback")
+        logger.warning("Parser received empty response - using fallback")
         return _fallback("empty response")
     
     # 1. clean the raw string
@@ -200,7 +236,7 @@ def _try_regex(text: str) -> AnalysisObject | None:
             if match:
                 fields[field] = match.group(1).strip()
 
-        for field in ("tech_stack", "prerequisites", "setup_steps", "api_endpoints"):
+        for field in ("tech_stack", "prerequisites", "setup_steps", "usage_examples", "api_endpoints"):
             pattern = rf'"{field}"\s*:\s*\[([^\]]*)\]'
             match = re.search(pattern, text, re.DOTALL)
             if match:

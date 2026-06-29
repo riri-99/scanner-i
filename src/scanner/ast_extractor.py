@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .ast_loader import get_parser
-from .ast_queries import run_query, BODY_KINDS, IMPORT_TEXT_FILTERS
+from .ast_queries import run_query, BODY_KINDS
 
 # RESULT MODEL
 
@@ -41,14 +41,8 @@ def extract_skeleton(content: str, readmegen_lang: str) -> SkeletonResult:
     classes = captures.get("class", [])
     comments = captures.get("comment", [])
 
-    text_filter = IMPORT_TEXT_FILTERS.get(lang_key)
-    if text_filter:
-        imports = [
-            n for n in imports
-            if _node_text(n, code).strip().startswith(tuple(text_filter))
-        ]
 
-    if not functions and not imports:
+    if not functions and not classes and not imports:
         return SkeletonResult("", False, "no structural nodes matched")
     
     sections = []
@@ -102,7 +96,14 @@ def _find_body_child(node, body_types: set[str]):
     for child in node.children:
         if child.type in body_types:
             return child
-        return None
+    
+    for child in node.children:
+        for grandchild in child.children:
+            if grandchild.type in body_types:
+                return grandchild
+            
+    return None
+
     
 # COmment attachment
 

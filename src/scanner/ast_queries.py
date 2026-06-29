@@ -14,20 +14,20 @@ NODE_KINDS: dict[str, dict[str, list[str]]] = {
         "comments":  ["comment"],
     },
     "javascript": {
-        "imports":   ["import_statement"],
-        "functions": ["function_declaration", "method_definition"],
+        "imports":   ["import_statement", "variable_declaration"],
+        "functions": ["function_declaration", "method_definition", "assignment_expression", "variable_declarator"],
         "classes":   ["class_declaration"],
         "comments":  ["comment"],
     },
     "typescript": {
-        "imports":   ["import_statement"],
-        "functions": ["function_declaration", "method_definition"],
+        "imports":   ["import_statement", "variable_declaration"],
+        "functions": ["function_declaration", "method_definition", "assignment_expression", "variable_declarator"],
         "classes":   ["class_declaration", "interface_declaration"],
         "comments":  ["comment"],
     },
     "tsx": {
-        "imports":   ["import_statement"],
-        "functions": ["function_declaration", "method_definition"],
+        "imports":   ["import_statement", "variable_declaration"],
+        "functions": ["function_declaration", "method_definition", "assignment_expression", "variable_declarator"],
         "classes":   ["class_declaration", "interface_declaration"],
         "comments":  ["comment"],
     },
@@ -155,9 +155,21 @@ def run_query(readmegen_lang: str, tree, code: bytes) -> dict[str, list]:
         return {}
     
     cursor = QueryCursor(query)
-    captures = cursor.captures(tree.root_node)
+    raw_captures = cursor.captures(tree.root_node)
 
-    return {name: nodes for name, nodes in captures.items()}
+    key = readmegen_lang.lower()
+    filters = CAPTURE_FILTERS.get(key, {})
+
+    result = {}
+    for category, nodes in raw_captures.items():
+        node_filter = filters.get(category)
+        if node_filter is None:
+            result[category] = nodes
+        else:
+            result[category] = [n for n in nodes if node_filter(n, code)]
+
+    return result
+
 
 # Helper
 
@@ -181,6 +193,50 @@ BODY_KINDS: dict[str, list[str]] = {
     "c":          ["compound_statement", "field_declaration_list"],
     "swift":      ["function_body", "class_body"],
     "shell":      ["compound_statement"],
+}
+
+def _is_require_call(node, code: bytes) -> bool:
+    
+    # true if a variable_declaration's value is a require(...) call.
+    text = code[node.start_byte: node.end_byte].decode("utf-8", errors="ignore")
+    return "require(" in text or "require_relative(" in text
+
+def _is_ruby_require(node, code: bytes) -> bool:
+    
+    # true if a ruby call node is actualyy require/require_relative/load.
+    text = code[node.start_byte: node.end_byte].decode("utf-8", errors="ignore").strip()
+    return text.startswith(("require", "require_relative", "load", "autoload"))
+
+def _is_function_value_assignment(node, code: bytes) -> bool:
+
+    for child in node.children:
+        if child.type in ("function_expression", "arrow_function", "generator_function"):
+            return True
+        
+        for grandchild in child.children:
+            if grandchild.type in ("function_expression", "arrow_function", "generator_function"):
+                return True
+    return False
+
+CAPTURE_FILTERS: dict[str, dict[str, callable]] = {
+    "ruby": {
+        "import": _is_ruby_require,
+    },
+
+    "javascript": {
+        "import": _is_require_call,
+        "function": _is_function_value_assignment,
+    },
+
+    "typescript": {
+        "import": _is_require_call,
+        "function": _is_function_value_assignment,
+    },
+
+    "tsx": {
+        "import": _is_require_call,
+        "function": _is_function_value_assignment,
+    },
 }
 
 IMPORT_TEXT_FILTERS: dict[str, list[str]] = {
