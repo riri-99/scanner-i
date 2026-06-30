@@ -62,10 +62,15 @@ def _looks_like_command(text: str) -> bool:
 # 1. Header
 
 def render_header(snapshot: RepoSnapshot, analysis: AnalysisObject) -> str:
+
     raw_name = snapshot.name
     pretty_name = re.sub(r"[-_]", " ", raw_name).title()
     lines = [f"# {pretty_name}"]
     lines.append("")
+
+    if analysis.tagline and analysis.tagline.strip():
+        lines.append(f"**{analysis.tagline.strip()}**")
+        lines.append("")
 
     badges: list[str] = []
 
@@ -99,6 +104,15 @@ def render_about(analysis: AnalysisObject) -> str:
     if not analysis.purpose or not analysis.purpose.strip():
         return ""
     return f"## About\n\n{analysis.purpose.strip()}"
+
+
+# 2b. why this exist, the problem statemnet
+
+def render_problem_statement(analysis: AnalysisObject) -> str:
+
+    if not analysis.problem_statement or not analysis.problem_statement.strip():
+        return ""
+    return f"## Why This Exists\n\n{analysis.problem_statement.strip()}"
 
 # 3. How It Works
 
@@ -163,27 +177,33 @@ def render_installation(analysis: AnalysisObject) -> str:
 def render_usage(analysis: AnalysisObject) -> str:
 
     # usage exapmles as code block
-    examples = [e for e in analysis.usage_examples if e.get("example", "").strip()]
+    examples = [e for e in analysis.usage_examples if isinstance[e, dict] and e.get("command", "").strip()]
     if not examples:
         return ""
     
     lines = ["## Usage", ""]
 
-    for item in examples:
-        example = item.get("example", "").strip()
-        explanation = item.get("explanation", "").strip()
+    for ex in examples:
+        title = ex.get("title", "").strip()
+        command = ex.get("command", "").strip()
+        description = ex.get("ddescription", "").strip()
 
-        if explanation:
-            lines.append(explanation)
+        if title:
+            lines.append(f"**{title}**")
             lines.append("")
 
-        lang = _infer_code_lang(example)
+        lang = _infer_code_lang(command)
         lines.append(f"```{lang}")
-        lines.append(example)
+        lines.append(command)
         lines.append("```")
+
+        if description:
+            lines.append("description")
+
         lines.append("")
 
     return "\n".join(lines).rstrip()
+
 
 def _infer_code_lang(text: str) -> str:
 
@@ -262,9 +282,37 @@ def _format_endpoint(raw: str) -> str:
             
     return raw
 
+# 9b. Command Reference (CLI tools only)
+
+def render_command_reference(analysis: AnalysisObject) -> str:
+
+    commands = [
+        c for c in analysis.command_reference
+        if isinstance(c, dict) and c.get("command", "").strip()
+    ]
+
+    if not commands:
+        return ""
+    
+    lines = [
+        "## Command Reference",
+        "",
+        "| Command | Description |",
+        "|---|---|",
+    ]
+
+    for c in commands:
+        command = c.get("command", "").strip()
+        description = c.get("description", "").strip()
+        lines.append(f"| `{command}` | {description} |")
+
+    return "\n".join(lines)
+
+
 # 10. Scripts
 
 def render_scripts(analysis: AnalysisObject) -> str:
+    
     scripts = {k.strip(): v.strip() for k,v in analysis.scripts.items() if k and v}
     if not scripts:
         return ""

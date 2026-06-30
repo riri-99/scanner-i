@@ -5,6 +5,8 @@
 
 {{ about }}
 
+{{ problem_statement }}
+
 {{ how_it_works }}
 
 {{ tech_stack }}
@@ -14,6 +16,8 @@
 {{ installation }}
 
 {{ usage }}
+
+{{ command_reference }}
 
 {{ env_variables }}
 

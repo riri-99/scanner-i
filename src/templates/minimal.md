@@ -7,4 +7,6 @@
 
 {{ usage }}
 
+{{ command_reference }}
+
 {{ license }}

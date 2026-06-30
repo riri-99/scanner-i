@@ -3,6 +3,8 @@
 
 {{ about }}
 
+{{ problem_statement }}
+
 {{ how_it_works }}
 
 {{ tech_stack }}
@@ -18,6 +20,8 @@
 ---
 
 {{ usage }}
+
+{{ command_reference }}
 
 {{ api_reference }}
 
